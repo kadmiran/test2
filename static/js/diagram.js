@@ -149,16 +149,39 @@ const architectureDiagram = {
         Object.keys(this.components).forEach(key => {
             const comp = this.components[key];
             if (comp) {
+                console.log(`🔧 ${key} 컴포넌트 처리 중...`);
+                console.log(`  - 현재 클래스: ${comp.className}`);
+                
                 comp.classList.add('active');
+                console.log(`  - active 클래스 추가 후: ${comp.className}`);
+                
                 const statusEl = comp.querySelector('.component-status');
-                if (statusEl) statusEl.textContent = '준비완료';
+                if (statusEl) {
+                    console.log(`  - 상태 텍스트 변경: "${statusEl.textContent}" → "준비완료"`);
+                    statusEl.textContent = '준비완료';
+                } else {
+                    console.warn(`  - ${key}: 상태 요소를 찾을 수 없음`);
+                }
+                
+                // 스타일 확인
+                const computedStyle = window.getComputedStyle(comp);
+                console.log(`  - 최종 스타일: border-color=${computedStyle.borderColor}, background=${computedStyle.background}`);
                 console.log(`✅ ${key} 활성화됨`);
+            } else {
+                console.error(`❌ ${key}: 컴포넌트 요소 없음`);
             }
         });
         
         // 모든 화살표를 활성화된 상태로 표시
-        Object.values(this.arrows).forEach(arrow => {
-            if (arrow) arrow.classList.add('active');
+        console.log('🎯 화살표 활성화 중...');
+        Object.keys(this.arrows).forEach(arrowId => {
+            const arrow = this.arrows[arrowId];
+            if (arrow) {
+                arrow.classList.add('active');
+                console.log(`✅ ${arrowId} 화살표 활성화됨`);
+            } else {
+                console.warn(`⚠️ ${arrowId}: 화살표 요소 없음`);
+            }
         });
         
         console.log('✅ 초기 상태 표시 완료');

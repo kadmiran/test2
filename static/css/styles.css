@@ -234,15 +234,23 @@ textarea {
     margin-top: 15px;
     max-height: 300px;
     overflow-y: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
+    font-family: 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
     text-align: left;
+    color: #495057;
+    font-weight: 400;
 }
 
 .status-log .status-item {
-    padding: 5px 0;
+    padding: 8px 0;
     color: #495057;
     border-bottom: 1px solid #dee2e6;
+    font-family: 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    transition: color 0.2s ease;
 }
 
 .status-log .status-item:last-child {
@@ -251,10 +259,12 @@ textarea {
 
 .status-log .status-item.success {
     color: #28a745;
+    font-weight: 500;
 }
 
 .status-log .status-item.error {
     color: #dc3545;
+    font-weight: 500;
 }
 
 .result {
@@ -501,17 +511,23 @@ textarea {
     border-radius: 10px;
     padding: 30px 20px;
     margin-top: 20px;
-    min-height: 450px;
+    min-height: 650px;
+    height: 650px;
     position: relative;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    z-index: 1;
+    width: 100%;
+    max-width: 1200px;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 .architecture-diagram.show {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    display: block;
+    visibility: visible;
+    opacity: 1;
 }
 
 .architecture-diagram h4 {
@@ -525,7 +541,13 @@ textarea {
 .diagram-container {
     position: relative;
     width: 100%;
-    height: 450px;
+    height: 650px;
+    min-height: 650px;
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 .component {
@@ -597,41 +619,41 @@ textarea {
 }
 
 /* 컴포넌트 위치 - 새로운 레이아웃 */
-/* 1행 (20px): Frontend, Server (좌측) */
+/* 1행 (40px): Frontend, Server (좌측) */
 .comp-frontend { 
-    top: 20px; 
+    top: 40px; 
     left: 40px; 
 }
 
 .comp-webserver { 
-    top: 20px; 
+    top: 40px; 
     left: 180px; 
 }
 
-/* 2행 (180px): VectorDB, DART, Naver (우측) */
+/* 2행 (200px): VectorDB, DART, Naver (우측) */
 .comp-vectordb { 
-    top: 180px; 
+    top: 200px; 
     right: 380px; 
 }
 
 .comp-dart { 
-    top: 180px; 
+    top: 200px; 
     right: 220px; 
 }
 
 .comp-naver { 
-    top: 180px; 
+    top: 200px; 
     right: 40px; 
 }
 
-/* 3행 (340px): Midm, Gemini (우측) */
+/* 3행 (360px): Midm, Gemini (우측) */
 .comp-midm { 
-    top: 340px; 
+    top: 360px; 
     right: 220px; 
 }
 
 .comp-gemini { 
-    top: 340px; 
+    top: 360px; 
     right: 40px; 
 }
 
@@ -706,11 +728,13 @@ textarea {
 
     .architecture-diagram {
         padding: 20px 10px;
-        min-height: 550px;
+        min-height: 650px;
+        height: 650px;
     }
 
     .diagram-container {
-        height: 500px;
+        height: 650px;
+        min-height: 650px;
     }
 
     .component {
@@ -735,12 +759,12 @@ textarea {
     /* 모바일 레이아웃 조정 */
     /* 1행: Frontend, Server */
     .comp-frontend { 
-        top: 15px; 
+        top: 30px; 
         left: 15px; 
     }
 
     .comp-webserver { 
-        top: 15px; 
+        top: 30px; 
         left: 120px; 
     }
 
@@ -762,17 +786,13 @@ textarea {
 
     /* 3행: Midm, Gemini */
     .comp-midm { 
-        top: 305px; 
+        top: 290px; 
         right: 105px; 
     }
 
     .comp-gemini { 
-        top: 305px; 
+        top: 290px; 
         right: 15px; 
-    }
-    
-    .diagram-container {
-        height: 400px;
     }
 }
 
