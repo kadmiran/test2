@@ -274,6 +274,7 @@ class LLMOrchestrator:
         # 1. 작업 유형별 라우팅이 설정되어 있으면 해당 Provider 사용
         if task_type and task_type in self.task_routing:
             provider_name = self.task_routing[task_type]
+            print(f"   🔀 라우팅 적용: {task_type} → {provider_name}")
             return self.providers[provider_name]
         
         # 2. 작업 유형별 자동 선택 로직 (향후 확장)
@@ -289,10 +290,13 @@ class LLMOrchestrator:
         
         # 3. 기본 Provider 사용
         if self.default_provider and self.default_provider in self.providers:
+            print(f"   🔀 기본 Provider 사용: {self.default_provider}")
             return self.providers[self.default_provider]
         
         # 4. 아무 Provider라도 반환 (폴백)
         if self.providers:
+            fallback_name = list(self.providers.keys())[0]
+            print(f"   🔀 폴백 Provider 사용: {fallback_name}")
             return list(self.providers.values())[0]
         
         raise RuntimeError("등록된 LLM Provider가 없습니다.")

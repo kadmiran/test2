@@ -1,0 +1,44 @@
+{
+  "name_variation": {
+    "description": "회사명의 다양한 표기 방법 추출",
+    "template": "한국 상장회사 \"{company_name}\"의 공식 명칭과 가능한 모든 표기 방법을 나열해주세요. 가능한 표기 방법 내에 공백은 허용되지 않습니다.\n\n예시:\n- \"KT\" 입력 → [\"KT\", \"케이티\", \"주식회사케이티\", \"주식회사KT\"]\n- \"삼성전자\" 입력 → [\"삼성전자\", \"삼성전자주식회사\"]\n- \"SK텔레콤\" 입력 → [\"SK텔레콤\", \"에스케이텔레콤\"]\n\n\"{company_name}\"에 대해 가능한 모든 표기를 쉼표로 구분하여 나열해주세요.\n답변은 오직 회사명 리스트만 작성하고, 설명은 넣지 마세요.\n형식: 표기1, 표기2, 표기3",
+    "variables": ["company_name"]
+  },
+  
+  "time_range_extraction": {
+    "description": "사용자 질문에서 시간 범위 추출",
+    "template": "다음 질문에서 분석이 필요한 시간 범위(년수)를 추출하세요:\n\n질문: \"{user_query}\"\n\n다음 JSON 형식으로만 답변하세요 (코드 블록 없이 순수 JSON만):\n{{\n  \"years\": 3,\n  \"reason\": \"이유 설명\"\n}}\n\n가이드라인:\n- \"최근\", \"작년\" 등 → 1년\n- \"지난 몇 년\" → 3년\n- \"5년간\", \"10년간\" 등 구체적 언급 → 해당 년수\n- \"장기\", \"추세\" 등 → 5년\n- 명시 없으면 → 3년 (기본값)\n- **중요**: years는 반드시 1~10 사이의 정수여야 함",
+    "variables": ["user_query"]
+  },
+  
+  "report_type_recommendation": {
+    "description": "사용자 질문에 적합한 보고서 타입 추천",
+    "template": "다음 질문에 답하기 위해 가장 적절한 보고서 타입을 추천하세요:\n\n질문: \"{user_query}\"\n\n사용 가능한 보고서 타입 (한글명 사용):\n1. 사업보고서: 연간 종합 실적, 재무제표, 사업 현황 (가장 상세함)\n2. 반기보고서: 상반기 실적 요약\n3. 분기보고서: 분기별 실적 요약\n\n다음 JSON 형식으로만 답변하세요 (코드 블록 없이 순수 JSON만):\n{{\n  \"recommended_types\": [\"사업보고서\", \"반기보고서\"],\n  \"reason\": \"선택 이유\",\n  \"need_historical_reports\": true\n}}\n\n가이드라인:\n- 재무 실적, 매출, 영업이익 등 재무 정보 → [\"사업보고서\", \"반기보고서\"]\n- 사업 현황, 경쟁력, 리스크 → [\"사업보고서\"]\n- 최근 실적만 필요 → [\"반기보고서\", \"사업보고서\"]\n- **장기 추세, 변화 분석, 여러 해 비교, 변동 요인 분석** → need_historical_reports: true\n- **최근 실적만, 단기 분석** → need_historical_reports: false\n- **중요**: recommended_types는 반드시 1개 이상 포함해야 함\n- **중요**: need_historical_reports가 true면 여러 해의 보고서를 수집합니다",
+    "variables": ["user_query"]
+  },
+  
+  "industry_inference": {
+    "description": "회사명으로 산업군 추론",
+    "template": "\"{company_name}\"는 어떤 산업에 속하는 회사인가요?\n\n다음 중에서 가장 적절한 산업을 1개만 선택하고, 그 이름만 답변하세요:\n- IT/소프트웨어\n- 반도체\n- 디스플레이\n- 전기전자\n- 자동차/부품\n- 화학\n- 제약/바이오\n- 금융\n- 통신\n- 유통\n- 건설\n- 철강\n- 에너지\n- 식품\n- 기타\n\n답변 형식: 산업명 하나만 작성",
+    "variables": ["company_name"]
+  },
+  
+  "industry_keywords_extraction": {
+    "description": "사용자 질문에서 산업 분석 키워드 추출",
+    "template": "다음 질문과 회사 정보를 바탕으로 산업분석 리포트 검색에 사용할 키워드를 추출하세요:\n\n질문: \"{user_query}\"\n회사명: {company_name}\n기본 산업: {base_industry}\n\n다음 JSON 형식으로만 답변하세요:\n{{\n  \"keywords\": [\"키워드1\", \"키워드2\", \"키워드3\"],\n  \"reason\": \"선택 이유\"\n}}\n\n가이드라인:\n- 기본 산업군 키워드 포함 (예: \"반도체\", \"자동차\", \"통신\")\n- 질문의 핵심 키워드 추출 (예: \"AI\", \"전기차\", \"5G\")\n- 너무 구체적이거나 회사 특정적이지 않게\n- 산업 전반에 적용 가능한 키워드\n- 최대 3~5개 키워드",
+    "variables": ["user_query", "company_name", "base_industry"]
+  },
+  
+  "full_analysis": {
+    "description": "보고서 전체 분석 (메인 + 추가 보고서)",
+    "template": "당신은 전문 기업 분석가입니다.\n다음 보고서들을 종합 분석하여 사용자 질문에 답변해주세요.\n\n# 회사명\n{company_name}\n\n# 사용자 질문\n{user_query}\n\n# 메인 보고서\n{main_report}\n\n{additional_section}\n\n# 분석 요구사항\n1. 사용자 질문에 직접적으로 답변하세요\n2. 보고서의 구체적인 데이터와 수치를 인용하세요\n3. 객관적이고 전문적인 톤을 유지하세요\n4. 장단점을 균형있게 제시하세요\n5. 결론은 명확하고 실행 가능하게 작성하세요\n\n# 답변 형식 (Markdown)\n## 📊 핵심 요약\n- 질문에 대한 직접적 답변\n- 주요 발견사항 3-5개\n\n## 📈 상세 분석\n### 1. [주제1]\n- 보고서 인용 데이터\n- 분석 및 해석\n\n### 2. [주제2]\n...\n\n## 💡 결론 및 시사점\n- 핵심 메시지\n- 투자자/이해관계자 관점 제시\n\n## 📚 참고 자료\n- 인용한 보고서 목록",
+    "variables": ["company_name", "user_query", "main_report", "additional_section"]
+  },
+  
+  "rag_analysis": {
+    "description": "RAG 기반 분석 (검색된 청크 사용)",
+    "template": "당신은 전문 기업 분석가입니다.\n\n# 분석 대상\n회사명: {company_name}\n질문: {user_query}\n\n# 검색된 관련 내용 ({num_chunks}개 청크)\n{relevant_context}\n\n# 분석 요구사항\n1. **위에 제공된 내용만을 기반으로** 답변하세요\n2. 구체적인 데이터, 수치, 인용구를 활용하세요\n3. 각 주장에 대해 어느 보고서/청크에서 나온 정보인지 명시하세요\n4. 제공된 내용에 없는 정보는 추측하지 마세요\n5. 정보가 부족하면 솔직하게 \"제공된 자료에서 확인할 수 없음\"이라고 명시하세요\n\n# 답변 형식 (Markdown)\n## 📊 핵심 요약\n질문에 대한 직접적 답변 (3-5문장)\n\n## 📈 상세 분석\n### 1. [주제1]\n**근거 자료**: [보고서명 - Reference X]\n- 구체적 데이터/내용\n- 분석 및 해석\n\n### 2. [주제2]\n**근거 자료**: [보고서명 - Reference Y]\n...\n\n## 💡 결론\n- 핵심 메시지\n- 한계점 (있다면)\n\n## 📚 참고한 보고서\n- 인용한 보고서 및 청크 번호 목록",
+    "variables": ["company_name", "user_query", "num_chunks", "relevant_context"]
+  }
+}
+

@@ -30,28 +30,26 @@ const architectureDiagram = {
         
         // 연결 관계 정의 (from -> to)
         const connections = [
-            // 1행: Frontend <-> Server <-> DART
+            // 1행: Frontend → Server
             { from: 'frontend', to: 'webserver', id: 'arrow-frontend-webserver' },
-            { from: 'webserver', to: 'dart', id: 'arrow-webserver-dart' },
             
-            // 2행: Server -> Midm, VectorDB, Naver
-            { from: 'webserver', to: 'midm', id: 'arrow-webserver-midm' },
+            // Server → 2행 (VectorDB, DART, Naver)
             { from: 'webserver', to: 'vectordb', id: 'arrow-webserver-vectordb' },
+            { from: 'webserver', to: 'dart', id: 'arrow-webserver-dart' },
             { from: 'webserver', to: 'naver', id: 'arrow-webserver-naver' },
             
-            // DART -> VectorDB (캐시 확인)
+            // 2행 → VectorDB
             { from: 'dart', to: 'vectordb', id: 'arrow-dart-vectordb' },
-            
-            // Midm -> VectorDB (질문 분석 결과)
-            { from: 'midm', to: 'vectordb', id: 'arrow-midm-vectordb' },
-            
-            // Naver -> VectorDB (리포트 저장)
             { from: 'naver', to: 'vectordb', id: 'arrow-naver-vectordb' },
             
-            // VectorDB -> Gemini (데이터 제공)
+            // VectorDB → 3행 (Midm, Gemini)
+            { from: 'vectordb', to: 'midm', id: 'arrow-vectordb-midm' },
             { from: 'vectordb', to: 'gemini', id: 'arrow-vectordb-gemini' },
             
-            // Gemini -> Server (결과 반환)
+            // 3행 내부
+            { from: 'midm', to: 'gemini', id: 'arrow-midm-gemini' },
+            
+            // Gemini → Server (결과 반환)
             { from: 'gemini', to: 'webserver', id: 'arrow-gemini-webserver' }
         ];
         
@@ -142,20 +140,40 @@ const architectureDiagram = {
         });
     },
     
-    activateArrow(arrowId) {
+    activateArrow(arrowId, duration = 3000) {
         const arrow = this.arrows[arrowId];
         if (arrow) {
             arrow.classList.add('active');
-            setTimeout(() => {
-                arrow.classList.remove('active');
-            }, 2000);
+            // duration이 0이면 계속 켜둠, 아니면 지정된 시간 후에 비활성화
+            if (duration > 0) {
+                setTimeout(() => {
+                    arrow.classList.remove('active');
+                }, duration);
+            }
+            // duration이 0이면 아무 것도 안 함 = 계속 active 상태 유지
         }
     },
     
-    showConnection(from, to) {
+    deactivateArrow(arrowId) {
+        const arrow = this.arrows[arrowId];
+        if (arrow) {
+            arrow.classList.remove('active');
+        }
+    },
+    
+    showConnection(from, to, duration = 3000) {
         const arrowId = `arrow-${from}-${to}`;
-        this.activateArrow(arrowId);
+        this.activateArrow(arrowId, duration);
     }
+};
+
+// 컴포넌트 상태 매핑 (로그 키워드 → 컴포넌트)
+const componentMap = {
+    'dart': { name: 'dart', connections: ['webserver', 'dart'] },
+    'midm': { name: 'midm', connections: ['webserver', 'vectordb', 'midm'] },
+    'naver': { name: 'naver', connections: ['webserver', 'naver'] },
+    'vectordb': { name: 'vectordb', connections: ['webserver', 'vectordb'] },
+    'gemini': { name: 'gemini', connections: ['vectordb', 'gemini'] }
 };
 
 function updateDiagramFromMessage(message) {
@@ -164,128 +182,61 @@ function updateDiagramFromMessage(message) {
     // 분석 시작
     if (msg.includes('분석 시작') || msg.includes('분석 요청')) {
         architectureDiagram.activate('frontend', '요청 전송');
-        architectureDiagram.showConnection('frontend', 'webserver');
+        architectureDiagram.showConnection('frontend', 'webserver', 2000);
         setTimeout(() => {
             architectureDiagram.activate('webserver', '요청 수신');
-        }, 300);
+            architectureDiagram.deactivate('frontend', '대기중');
+        }, 500);
     }
     
-    if (msg.includes('서버에서 분석 시작')) {
-        architectureDiagram.activate('webserver', '분석 시작');
-    }
-    
-    // 1단계: 회사 정보 조회
-    if (msg.includes('1단계') || msg.includes('회사 정보 조회 중')) {
-        architectureDiagram.activate('webserver', '처리중');
-        architectureDiagram.activate('dart', '회사 검색');
-        architectureDiagram.showConnection('webserver', 'dart');
-    }
-    
-    if (msg.includes('회사 정보 조회 완료')) {
-        architectureDiagram.deactivate('dart', '회사 확인');
-    }
-    
-    // 2단계: 보고서 검색 (AI 질문 분석)
-    if (msg.includes('2단계') || msg.includes('보고서 검색 중')) {
-        architectureDiagram.activate('dart', '보고서 검색');
-        architectureDiagram.activate('midm', '질문 분석');
-        architectureDiagram.showConnection('webserver', 'midm');
-    }
-    
-    if (msg.includes('ai가 추천한') || msg.includes('보고서를 찾았습니다')) {
-        architectureDiagram.deactivate('midm', '분석 완료');
-    }
-    
-    // 3단계: 보고서 다운로드
-    if (msg.includes('3단계') || msg.includes('보고서 다운로드 중')) {
-        architectureDiagram.activate('dart', '다운로드중');
-    }
-    
-    // VectorDB 캐시 확인
-    if (msg.includes('vectordb') && msg.includes('캐시 확인')) {
-        architectureDiagram.activate('vectordb', '캐시 검색');
-        architectureDiagram.showConnection('webserver', 'vectordb');
-    }
-    
-    if (msg.includes('vectordb에서 로드')) {
-        architectureDiagram.activate('vectordb', '캐시 적중');
-        setTimeout(() => {
-            architectureDiagram.deactivate('vectordb', '로드 완료');
-        }, 1000);
-    }
-    
-    if (msg.includes('캐시 없음')) {
-        architectureDiagram.deactivate('vectordb', '캐시 없음');
-        architectureDiagram.activate('dart', 'API 다운로드');
-    }
-    
-    if (msg.includes('다운로드 완료') && !msg.includes('네이버')) {
-        architectureDiagram.deactivate('dart', '다운로드 완료');
-    }
-    
-    // 네이버 금융 크롤링
-    if (msg.includes('네이버 금융') || msg.includes('증권사 리포트')) {
-        architectureDiagram.activate('naver', '크롤링중');
-        architectureDiagram.showConnection('webserver', 'naver');
-    }
-    
-    if (msg.includes('종목분석 리포트') && msg.includes('수집 완료')) {
-        architectureDiagram.activate('naver', '종목분석 완료');
-    }
-    
-    if (msg.includes('산업분석 리포트') && msg.includes('수집 완료')) {
-        architectureDiagram.deactivate('naver', '산업분석 완료');
-    }
-    
-    // VectorDB 저장
-    if (msg.includes('vectordb에 리포트 저장') || msg.includes('vectordb 저장 중')) {
-        architectureDiagram.activate('vectordb', '저장 중');
-        architectureDiagram.showConnection('webserver', 'vectordb');
-    }
-    
-    if (msg.includes('vectordb 저장 완료')) {
-        architectureDiagram.deactivate('vectordb', '저장 완료');
-    }
-    
-    // 4단계: AI 분석
-    if (msg.includes('4단계') || msg.includes('ai 분석 중')) {
-        architectureDiagram.activate('gemini', 'AI 분석중');
-        architectureDiagram.activate('vectordb', '데이터 제공');
-        architectureDiagram.showConnection('vectordb', 'gemini');
-    }
-    
-    if (msg.includes('관련 청크 발견') || msg.includes('vectordb에서') && msg.includes('검색')) {
-        architectureDiagram.activate('vectordb', '검색 완료');
-    }
-    
-    if (msg.includes('gemini') && msg.includes('분석 중')) {
-        architectureDiagram.activate('gemini', 'AI 분석중');
-    }
-    
-    if (msg.includes('ai 분석 완료') || msg.includes('분석 완료!')) {
-        architectureDiagram.deactivate('gemini', '분석 완료');
-        architectureDiagram.deactivate('vectordb', '완료');
-        architectureDiagram.activate('webserver', '결과 생성');
-        architectureDiagram.showConnection('gemini', 'webserver');
-    }
-    
-    // 최종: 결과 전달
-    if (msg.includes('결과를 가져오는 중')) {
-        architectureDiagram.deactivate('webserver', '완료');
-        architectureDiagram.activate('frontend', '결과 표시');
-        architectureDiagram.showConnection('webserver', 'frontend');
+    // 🔵 시작 로그 처리 (통합)
+    const startMatch = msg.match(/🔵\s*(dart|midm|naver|vectordb|gemini)/);
+    if (startMatch) {
+        const component = startMatch[1];
+        const statusMap = {
+            'dart': '처리중',
+            'midm': '질문 분석',
+            'naver': '크롤링중',
+            'vectordb': '처리중',
+            'gemini': 'AI 분석중'
+        };
         
-        setTimeout(() => {
-            architectureDiagram.deactivate('frontend', '표시 완료');
-        }, 2000);
+        // midm 로그는 gemini로 처리 (실제로는 Gemini 사용)
+        const actualComponent = component === 'midm' ? 'gemini' : component;
+        architectureDiagram.activate(actualComponent, statusMap[component]);
+        
+        // 연결 화살표 표시
+        if (component === 'midm' || component === 'gemini') {
+            architectureDiagram.showConnection('webserver', 'vectordb', 0);
+            architectureDiagram.showConnection('vectordb', 'gemini', 0);
+        } else {
+            architectureDiagram.showConnection('webserver', component, 0);
+        }
     }
     
-    // 파일 정리
-    if (msg.includes('다운로드 파일 정리') || msg.includes('파일 정리')) {
-        architectureDiagram.activate('webserver', '정리 중');
+    // ⚪ 완료 로그 처리 (통합)
+    const endMatch = msg.match(/⚪\s*(dart|midm|naver|vectordb|gemini)/);
+    if (endMatch) {
+        const component = endMatch[1];
+        // midm 로그는 gemini로 처리 (실제로는 Gemini 사용)
+        const actualComponent = component === 'midm' ? 'gemini' : component;
         setTimeout(() => {
-            architectureDiagram.deactivate('webserver', '정리 완료');
-        }, 1000);
+            architectureDiagram.deactivate(actualComponent, '완료');
+            
+            // Gemini 완료 시 결과 반환
+            if (component === 'gemini' || component === 'midm') {
+                architectureDiagram.showConnection('gemini', 'webserver', 2000);
+            }
+        }, 800);
+    }
+    
+    // 전체 분석 완료
+    if (msg.includes('전체 분석 완료') || msg.includes('분석이 완료되었습니다')) {
+        setTimeout(() => {
+            ['frontend', 'webserver', 'dart', 'naver', 'vectordb', 'midm', 'gemini'].forEach(comp => {
+                architectureDiagram.deactivate(comp, '대기중');
+            });
+        }, 2000);
     }
 }
 

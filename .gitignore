@@ -7,41 +7,31 @@ __pycache__/
 env/
 venv/
 ENV/
+*.egg-info/
+.eggs/
 
-# 다운로드된 파일
-downloads/
-*.zip
-*.xml
-corp_code.zip
-CORPCODE.xml
-temp_*.xml
-
-# 보고서 출력 파일 (MD 파일)
-reports_output/
-
-# Vector DB 캐시
-vector_db/
-
-# 환경 변수 파일
+# 환경 변수
 .env
-.env.local
-.env.production
+config_local.py
 
 # IDE
+.vscode/
 .idea/
 *.swp
 *.swo
 *~
-# .vscode/settings.json은 포함 (PlantUML 설정)
+
+# 다운로드 파일
+downloads/*.zip
+downloads/*_extracted/
+downloads/debug_*.html
+
+# Vector DB
+vector_db/
+
+# 로그
+*.log
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# PlantUML 생성 파일
-diagrams/*.png
-diagrams/*.svg
-diagrams/*.pdf

@@ -66,9 +66,9 @@ class Config:
     
     # 작업별 LLM 라우팅 (task_type -> provider_name)
     LLM_TASK_ROUTING: dict = {
-        'query_analysis': 'midm',           # 질문 분석은 Midm 사용
-        'long_context_analysis': 'gemini',  # 긴 맥락 분석은 Gemini 사용 (더 정확함)
-        'name_variation': 'midm',           # 검색어 제안은 Midm 사용
+        'query_analysis': 'gemini',         # 질문 분석은 Gemini 사용 (정확도 높음)
+        'long_context_analysis': 'gemini',  # 긴 맥락 분석은 Gemini 사용
+        'name_variation': 'midm',           # 검색어 제안은 Midm 사용 (빠름)
         # 향후 추가:
         # 'quick_analysis': 'openai',
         # 'summary': 'claude',

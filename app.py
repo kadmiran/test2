@@ -65,17 +65,13 @@ else:
     logger.warning("   검색어 제안에는 기본 Provider(Gemini)가 사용됩니다.")
 
 # 작업별 라우팅 설정
+logger.info("🔀 LLM 작업별 라우팅 설정 중...")
 for task_type, provider_name in config.LLM_TASK_ROUTING.items():
     try:
         llm_orchestrator.set_task_routing(task_type, provider_name)
+        logger.info(f"   ✅ {task_type} → {provider_name}")
     except ValueError as e:
-        logger.warning(f"라우팅 설정 실패: {e}")
-
-# 향후 추가 LLM Provider 등록 예시:
-# if config.OPENAI_API_KEY:
-#     from llm_orchestrator import OpenAIProvider
-#     openai_provider = OpenAIProvider(config.OPENAI_API_KEY)
-#     llm_orchestrator.register_provider(openai_provider)
+        logger.warning(f"   ❌ 라우팅 설정 실패: {e}")
 
 logger.info("✅ LLM Orchestrator 초기화 완료")
 

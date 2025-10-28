@@ -521,7 +521,7 @@ textarea {
 .diagram-container {
     position: relative;
     width: 100%;
-    height: 340px;
+    height: 450px;
 }
 
 .component {
@@ -553,11 +553,11 @@ textarea {
 @keyframes borderBlink {
     0%, 100% { 
         border-color: #E30613; 
-        box-shadow: 0 6px 20px rgba(227, 6, 19, 0.4);
+        box-shadow: 0 6px 20px rgba(227, 6, 19, 0.5);
     }
     50% { 
-        border-color: #FF4757; 
-        box-shadow: 0 8px 30px rgba(227, 6, 19, 0.8);
+        border-color: #FF1744; 
+        box-shadow: 0 8px 35px rgba(255, 23, 68, 0.9);
     }
 }
 
@@ -592,8 +592,8 @@ textarea {
     font-weight: 600;
 }
 
-/* 컴포넌트 위치 - 개선된 4행 레이아웃 */
-/* 1행: Frontend, Server, DART */
+/* 컴포넌트 위치 - 새로운 레이아웃 */
+/* 1행 (20px): Frontend, Server (좌측) */
 .comp-frontend { 
     top: 20px; 
     left: 40px; 
@@ -601,37 +601,34 @@ textarea {
 
 .comp-webserver { 
     top: 20px; 
-    left: 50%; 
-    transform: translateX(-50%); 
+    left: 180px; 
+}
+
+/* 2행 (180px): VectorDB, DART, Naver (우측) */
+.comp-vectordb { 
+    top: 180px; 
+    right: 380px; 
 }
 
 .comp-dart { 
-    top: 20px; 
-    right: 40px; 
-}
-
-/* 2행: Midm, VectorDB, Naver */
-.comp-midm { 
-    top: 130px; 
-    left: 40px; 
-}
-
-.comp-vectordb { 
-    top: 130px; 
-    left: 50%; 
-    transform: translateX(-50%); 
+    top: 180px; 
+    right: 220px; 
 }
 
 .comp-naver { 
-    top: 130px; 
+    top: 180px; 
     right: 40px; 
 }
 
-/* 3행: Gemini (중앙, 충분한 간격) */
+/* 3행 (340px): Midm, Gemini (우측) */
+.comp-midm { 
+    top: 340px; 
+    right: 220px; 
+}
+
 .comp-gemini { 
-    top: 240px; 
-    left: 50%; 
-    transform: translateX(-50%); 
+    top: 340px; 
+    right: 40px; 
 }
 
 /* SVG 화살표 스타일 */
@@ -639,31 +636,38 @@ textarea {
     stroke: #E30613;
     stroke-width: 2;
     fill: none;
-    opacity: 0.2;
-    transition: opacity 0.3s, stroke-width 0.3s;
+    opacity: 0.15;
+    transition: opacity 0.4s ease, stroke-width 0.4s ease;
+    filter: drop-shadow(0 0 2px rgba(227, 6, 19, 0.3));
 }
 
 .connection-arrow.active {
     opacity: 1;
-    stroke-width: 3;
-    animation: arrowPulse 1.2s ease-in-out infinite;
+    stroke-width: 4;
+    animation: arrowPulse 1s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(227, 6, 19, 0.8));
 }
 
 @keyframes arrowPulse {
     0%, 100% { 
-        opacity: 0.7; 
-        stroke-width: 3; 
+        opacity: 0.8; 
+        stroke-width: 4; 
         stroke: #E30613;
     }
     50% { 
         opacity: 1; 
-        stroke-width: 4;
-        stroke: #FF4757;
+        stroke-width: 5;
+        stroke: #FF1744;
     }
 }
 
 .arrow-marker {
     fill: #E30613;
+    transition: fill 0.3s ease;
+}
+
+.connection-arrow.active ~ marker path {
+    fill: #FF1744;
 }
 
 /* 데이터 흐름 애니메이션 */
@@ -725,6 +729,7 @@ textarea {
     }
 
     /* 모바일 레이아웃 조정 */
+    /* 1행: Frontend, Server */
     .comp-frontend { 
         top: 15px; 
         left: 15px; 
@@ -732,35 +737,38 @@ textarea {
 
     .comp-webserver { 
         top: 15px; 
-        left: 50%; 
-        transform: translateX(-50%); 
+        left: 120px; 
+    }
+
+    /* 2행: VectorDB, DART, Naver */
+    .comp-vectordb { 
+        top: 160px; 
+        right: 200px; 
     }
 
     .comp-dart { 
-        top: 15px; 
-        right: 15px; 
-    }
-
-    .comp-midm { 
-        top: 120px; 
-        left: 15px; 
-    }
-
-    .comp-vectordb { 
-        top: 120px; 
-        left: 50%; 
-        transform: translateX(-50%); 
+        top: 160px; 
+        right: 105px; 
     }
 
     .comp-naver { 
-        top: 120px; 
+        top: 160px; 
         right: 15px; 
     }
 
+    /* 3행: Midm, Gemini */
+    .comp-midm { 
+        top: 305px; 
+        right: 105px; 
+    }
+
     .comp-gemini { 
-        top: 225px; 
-        left: 50%; 
-        transform: translateX(-50%); 
+        top: 305px; 
+        right: 15px; 
+    }
+    
+    .diagram-container {
+        height: 400px;
     }
 }
 
