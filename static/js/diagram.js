@@ -7,8 +7,11 @@ const architectureDiagram = {
     components: {},
     arrows: {},
     svgNS: 'http://www.w3.org/2000/svg',
+    isInitialized: false,
     
     init() {
+        console.log('🏗️ 다이어그램 초기화 시작...');
+        
         // 컴포넌트 참조 저장
         this.components = {
             'frontend': document.getElementById('comp-frontend'),
@@ -20,13 +23,41 @@ const architectureDiagram = {
             'gemini': document.getElementById('comp-gemini')
         };
         
+        // 컴포넌트 존재 확인
+        let missingComponents = [];
+        Object.keys(this.components).forEach(key => {
+            if (!this.components[key]) {
+                missingComponents.push(key);
+            }
+        });
+        
+        if (missingComponents.length > 0) {
+            console.error('❌ 누락된 컴포넌트:', missingComponents);
+            return false;
+        }
+        
+        console.log('✅ 모든 컴포넌트 발견됨');
+        
         // SVG 화살표 그리기
         this.drawAllConnections();
+        
+        // 모든 컴포넌트를 활성화된 상태로 표시
+        this.showInitialState();
+        
+        this.isInitialized = true;
+        console.log('✅ 다이어그램 초기화 완료');
+        return true;
     },
     
     drawAllConnections() {
         const svg = document.getElementById('flowLines');
-        if (!svg) return;
+        if (!svg) {
+            console.error('❌ SVG 요소를 찾을 수 없습니다');
+            return;
+        }
+        
+        // 기존 화살표 제거
+        svg.innerHTML = '';
         
         // 연결 관계 정의 (from -> to)
         const connections = [
@@ -60,13 +91,18 @@ const architectureDiagram = {
                 this.arrows[conn.id] = arrow;
             }
         });
+        
+        console.log('✅ 화살표 그리기 완료');
     },
     
     createArrow(fromId, toId, arrowId) {
         const fromComp = this.components[fromId];
         const toComp = this.components[toId];
         
-        if (!fromComp || !toComp) return null;
+        if (!fromComp || !toComp) {
+            console.warn(`⚠️ 컴포넌트를 찾을 수 없음: ${fromId} → ${toId}`);
+            return null;
+        }
         
         const fromRect = fromComp.getBoundingClientRect();
         const toRect = toComp.getBoundingClientRect();
@@ -104,6 +140,28 @@ const architectureDiagram = {
         path.setAttribute('stroke-dasharray', '5,5');
         
         return path;
+    },
+    
+    showInitialState() {
+        console.log('🎨 초기 상태 표시 중...');
+        
+        // 모든 컴포넌트를 활성화된 상태로 표시
+        Object.keys(this.components).forEach(key => {
+            const comp = this.components[key];
+            if (comp) {
+                comp.classList.add('active');
+                const statusEl = comp.querySelector('.component-status');
+                if (statusEl) statusEl.textContent = '준비완료';
+                console.log(`✅ ${key} 활성화됨`);
+            }
+        });
+        
+        // 모든 화살표를 활성화된 상태로 표시
+        Object.values(this.arrows).forEach(arrow => {
+            if (arrow) arrow.classList.add('active');
+        });
+        
+        console.log('✅ 초기 상태 표시 완료');
     },
     
     activate(componentName, status = '처리중') {
@@ -144,13 +202,11 @@ const architectureDiagram = {
         const arrow = this.arrows[arrowId];
         if (arrow) {
             arrow.classList.add('active');
-            // duration이 0이면 계속 켜둠, 아니면 지정된 시간 후에 비활성화
             if (duration > 0) {
                 setTimeout(() => {
                     arrow.classList.remove('active');
                 }, duration);
             }
-            // duration이 0이면 아무 것도 안 함 = 계속 active 상태 유지
         }
     },
     
@@ -177,6 +233,11 @@ const componentMap = {
 };
 
 function updateDiagramFromMessage(message) {
+    if (!architectureDiagram.isInitialized) {
+        console.warn('⚠️ 다이어그램이 초기화되지 않았습니다');
+        return;
+    }
+    
     const msg = message.toLowerCase();
     
     // 분석 시작
@@ -240,10 +301,8 @@ function updateDiagramFromMessage(message) {
     }
 }
 
-// DOM 로드 후 다이어그램 초기화
-document.addEventListener('DOMContentLoaded', function() {
-    // 약간의 지연을 두고 초기화 (컴포넌트가 렌더링된 후)
-    setTimeout(() => {
-        architectureDiagram.init();
-    }, 100);
-});
+// 전역 함수로 노출
+window.architectureDiagram = architectureDiagram;
+window.updateDiagramFromMessage = updateDiagramFromMessage;
+
+console.log('📦 diagram.js 로드 완료');

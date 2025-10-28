@@ -503,11 +503,15 @@ textarea {
     margin-top: 20px;
     min-height: 450px;
     position: relative;
-    display: none;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .architecture-diagram.show {
-    display: block;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .architecture-diagram h4 {

@@ -394,42 +394,108 @@ class CompanyAnalyzer:
             end_date = datetime.now().strftime('%Y%m%d')
             start_date = (datetime.now() - timedelta(days=years*365)).strftime('%Y%m%d')
             
-            params = {
-                'crtfc_key': self.dart_api_key,
-                'corp_code': corp_code,
-                'bgn_de': start_date,
-                'end_de': end_date,
-                'page_no': 1,
-                'page_count': 100
-            }
+            print(f"   📅 검색 기간: {start_date} ~ {end_date}")
+            print(f"   🏢 회사 고유번호: {corp_code}")
             
-            response = requests.get(f'{self.base_url}/list.json', params=params, timeout=30)
-            response.raise_for_status()
+            # 페이지네이션으로 모든 보고서 검색
+            all_reports = []
+            page_no = 1
+            max_pages = 10  # 최대 10페이지까지 검색 (1000개 보고서)
             
-            data = response.json()
-            
-            if data.get('status') == '000':
-                all_reports = data.get('list', [])
+            while page_no <= max_pages:
+                print(f"   📄 페이지 {page_no} 검색 중...")
                 
-                # 원하는 보고서 유형만 필터링
-                filtered_reports = []
-                for report in all_reports:
-                    report_name = report.get('report_nm', '')
-                    for report_type in report_types:
-                        if report_type in report_name:
-                            filtered_reports.append(report)
+                params = {
+                    'crtfc_key': self.dart_api_key,
+                    'corp_code': corp_code,
+                    'bgn_de': start_date,
+                    'end_de': end_date,
+                    'page_no': page_no,
+                    'page_count': 100
+                }
+                
+                if page_no == 1:
+                    print(f"   🔗 API URL: {self.base_url}/list.json")
+                    print(f"   📋 요청 파라미터: {params}")
+                
+                response = requests.get(f'{self.base_url}/list.json', params=params, timeout=30)
+                print(f"   📡 HTTP 응답 코드: {response.status_code}")
+                
+                response.raise_for_status()
+                
+                data = response.json()
+                print(f"   📊 API 응답 상태: {data.get('status')}")
+                print(f"   📝 API 응답 메시지: {data.get('message', 'N/A')}")
+                
+                if data.get('status') == '000':
+                    page_reports = data.get('list', [])
+                    print(f"   📋 페이지 {page_no} 보고서 수: {len(page_reports)}개")
+                    
+                    if not page_reports:
+                        print(f"   ⚠️  페이지 {page_no}에 보고서가 없습니다. 검색 종료.")
+                        break
+                    
+                    all_reports.extend(page_reports)
+                    
+                    # 원하는 보고서 유형이 있는지 확인
+                    found_target = False
+                    for report in page_reports:
+                        report_name = report.get('report_nm', '')
+                        for report_type in report_types:
+                            if report_type in report_name:
+                                found_target = True
+                                break
+                        if found_target:
                             break
-                
-                print(f"✅ 총 {len(filtered_reports)}개의 보고서를 찾았습니다.")
-                if filtered_reports:
-                    print(f"   예시: {filtered_reports[0].get('report_nm')} ({filtered_reports[0].get('rcept_dt')})")
-                return filtered_reports
+                    
+                    if found_target:
+                        print(f"   ✅ 페이지 {page_no}에서 원하는 보고서 타입 발견! 검색 종료.")
+                        break
+                    
+                    page_no += 1
+                else:
+                    print(f"❌ 페이지 {page_no} 조회 실패: {data.get('message')}")
+                    break
+            
+            print(f"   📋 전체 수집된 보고서 수: {len(all_reports)}개")
+            
+            if all_reports:
+                print(f"   📄 전체 보고서 목록 (처음 5개):")
+                for i, report in enumerate(all_reports[:5]):
+                    print(f"      [{i+1}] {report.get('report_nm', 'N/A')} ({report.get('rcept_dt', 'N/A')})")
             else:
-                print(f"❌ 보고서 조회 실패: {data.get('message')}")
+                print(f"   ⚠️  전체 보고서가 0개입니다!")
                 return []
+            
+            # 원하는 보고서 유형만 필터링
+            filtered_reports = []
+            print(f"   🔍 필터링 중... (찾는 타입: {report_types})")
+            
+            for report in all_reports:
+                report_name = report.get('report_nm', '')
+                print(f"      📄 검사 중: '{report_name}'")
+                
+                for report_type in report_types:
+                    if report_type in report_name:
+                        filtered_reports.append(report)
+                        print(f"         ✅ 매치! '{report_type}' 포함됨")
+                        break
+                else:
+                    print(f"         ❌ 매치 안됨")
+            
+            print(f"✅ 총 {len(filtered_reports)}개의 보고서를 찾았습니다.")
+            if filtered_reports:
+                print(f"   📄 필터링된 보고서 목록:")
+                for i, report in enumerate(filtered_reports):
+                    print(f"      [{i+1}] {report.get('report_nm')} ({report.get('rcept_dt')})")
+            else:
+                print(f"   ⚠️  필터링 결과 0개! 원하는 보고서 타입이 없습니다.")
+            return filtered_reports
                 
         except Exception as e:
             print(f"❌ 오류: {e}")
+            import traceback
+            print(f"   📋 상세 오류: {traceback.format_exc()}")
             return []
     
     def download_report(self, rcept_no, save_path=None, company_name=None, report_name=None, report_date=None):
