@@ -499,9 +499,9 @@ textarea {
     background: #f8f9fa;
     border: 2px solid #e9ecef;
     border-radius: 10px;
-    padding: 20px;
+    padding: 30px 20px;
     margin-top: 20px;
-    min-height: 400px;
+    min-height: 450px;
     position: relative;
     display: none;
 }
@@ -513,97 +513,153 @@ textarea {
 .architecture-diagram h4 {
     text-align: center;
     color: #E30613;
-    margin-bottom: 20px;
-    font-size: 1rem;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
     font-weight: bold;
 }
 
 .diagram-container {
     position: relative;
     width: 100%;
-    height: 350px;
+    height: 400px;
 }
 
 .component {
     position: absolute;
     background: white;
-    border: 2px solid #ddd;
+    border: 3px solid #ddd;
     border-radius: 12px;
-    padding: 15px;
+    padding: 12px;
     text-align: center;
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    min-width: 100px;
+    min-width: 110px;
     z-index: 10;
 }
 
 .component.active {
     border-color: #E30613;
-    background: #fff5f5;
-    box-shadow: 0 4px 16px rgba(227, 6, 19, 0.3);
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+    box-shadow: 0 6px 20px rgba(227, 6, 19, 0.4);
+    transform: scale(1.08);
+    z-index: 11;
+}
+
+.component.active .component-icon {
+    animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
 }
 
 .component-icon {
     font-size: 2rem;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    transition: transform 0.3s;
 }
 
 .component-label {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     color: #333;
+    margin-bottom: 4px;
 }
 
 .component-status {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #666;
-    margin-top: 5px;
+    margin-top: 6px;
+    font-weight: 500;
+    min-height: 18px;
 }
 
-/* 컴포넌트 위치 */
-.comp-frontend { top: 10px; left: 10px; }
-.comp-webserver { top: 10px; left: 50%; transform: translateX(-50%); }
-.comp-dart { top: 10px; right: 10px; }
-.comp-naver { top: 120px; right: 10px; }
-.comp-vectordb { bottom: 120px; left: 50%; transform: translateX(-50%); }
-.comp-midm { bottom: 10px; left: 10px; }
-.comp-gemini { bottom: 10px; right: 10px; }
+.component.active .component-status {
+    color: #E30613;
+    font-weight: 600;
+}
 
-/* 데이터 흐름 선 */
-.flow-line {
-    position: absolute;
-    height: 2px;
-    background: #E30613;
+/* 컴포넌트 위치 - 3행 레이아웃 */
+/* 1행: Frontend, Server, DART */
+.comp-frontend { 
+    top: 30px; 
+    left: 50px; 
+}
+
+.comp-webserver { 
+    top: 30px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+}
+
+.comp-dart { 
+    top: 30px; 
+    right: 50px; 
+}
+
+/* 2행: Midm, VectorDB, Naver */
+.comp-midm { 
+    top: 160px; 
+    left: 50px; 
+}
+
+.comp-vectordb { 
+    top: 160px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+}
+
+.comp-naver { 
+    top: 160px; 
+    right: 50px; 
+}
+
+/* 3행: Gemini (중앙) */
+.comp-gemini { 
+    bottom: 30px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+}
+
+/* SVG 화살표 스타일 */
+.connection-arrow {
+    stroke: #E30613;
+    stroke-width: 2;
+    fill: none;
     opacity: 0;
     transition: opacity 0.3s;
 }
 
-.flow-line.active {
-    opacity: 1;
-    animation: flowAnimation 1s ease-in-out infinite;
+.connection-arrow.active {
+    opacity: 0.6;
+    animation: arrowPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes flowAnimation {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 1; }
+@keyframes arrowPulse {
+    0%, 100% { opacity: 0.4; stroke-width: 2; }
+    50% { opacity: 0.8; stroke-width: 3; }
 }
 
-/* 데이터 포인트 애니메이션 */
-.data-point {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background: #E30613;
-    border-radius: 50%;
+.arrow-marker {
+    fill: #E30613;
+}
+
+/* 데이터 흐름 애니메이션 */
+.flow-particle {
+    fill: #E30613;
     opacity: 0;
-    animation: dataFlow 2s ease-in-out infinite;
 }
 
-@keyframes dataFlow {
-    0% { opacity: 0; transform: scale(0); }
-    50% { opacity: 1; transform: scale(1.5); }
-    100% { opacity: 0; transform: scale(0); }
+.flow-particle.active {
+    animation: particleFlow 2s ease-in-out infinite;
+}
+
+@keyframes particleFlow {
+    0% { opacity: 0; r: 3; }
+    20% { opacity: 1; r: 5; }
+    80% { opacity: 1; r: 5; }
+    100% { opacity: 0; r: 3; }
 }
 
 @media (max-width: 768px) {
@@ -619,18 +675,71 @@ textarea {
         margin: -25px -25px 20px -25px;
     }
 
+    .architecture-diagram {
+        padding: 20px 10px;
+        min-height: 550px;
+    }
+
     .diagram-container {
         height: 500px;
     }
 
     .component {
-        font-size: 0.8rem;
-        padding: 10px;
-        min-width: 80px;
+        font-size: 0.75rem;
+        padding: 8px;
+        min-width: 90px;
     }
 
     .component-icon {
         font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+
+    .component-label {
+        font-size: 0.7rem;
+    }
+
+    .component-status {
+        font-size: 0.6rem;
+    }
+
+    /* 모바일 레이아웃 조정 */
+    .comp-frontend { 
+        top: 20px; 
+        left: 20px; 
+    }
+
+    .comp-webserver { 
+        top: 20px; 
+        left: 50%; 
+        transform: translateX(-50%); 
+    }
+
+    .comp-dart { 
+        top: 20px; 
+        right: 20px; 
+    }
+
+    .comp-midm { 
+        top: 150px; 
+        left: 20px; 
+    }
+
+    .comp-vectordb { 
+        top: 150px; 
+        left: 50%; 
+        transform: translateX(-50%); 
+    }
+
+    .comp-naver { 
+        top: 150px; 
+        right: 20px; 
+    }
+
+    .comp-gemini { 
+        bottom: 20px; 
+        left: 50%; 
+        transform: translateX(-50%); 
     }
 }
 
