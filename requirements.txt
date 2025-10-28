@@ -1,13 +1,38 @@
-requests>=2.25.1
-flask>=2.3.0
-google-generativeai>=0.3.0
-markdown>=3.4.0
-beautifulsoup4>=4.9.0
-lxml>=4.6.0
-PyMuPDF>=1.23.0
-langchain>=0.1.0
-langchain-community>=0.0.10
-faiss-cpu>=1.7.4
-sentence-transformers>=2.2.0
-python-dotenv>=0.19.0
-reportlab>=4.0.0
+# 기업 분석 AI - 필수 패키지 목록
+
+# ========================================
+# Web Framework
+# ========================================
+flask>=3.0.0
+
+# ========================================
+# HTTP & Web Scraping
+# ========================================
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+
+# ========================================
+# AI & LLM
+# ========================================
+google-generativeai>=0.4.0
+langchain>=0.1.10
+langchain-community>=0.0.20
+
+# ========================================
+# Vector Database & Embeddings
+# ========================================
+faiss-cpu>=1.8.0
+sentence-transformers>=2.3.0
+
+# ========================================
+# Document Processing
+# ========================================
+PyMuPDF>=1.23.0          # PDF 읽기/파싱
+reportlab>=4.0.0         # PDF 생성
+markdown>=3.5.0          # Markdown → HTML 변환
+
+# ========================================
+# Configuration
+# ========================================
+python-dotenv>=1.0.0     # .env 파일 지원 (선택사항)
