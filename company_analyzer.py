@@ -49,6 +49,9 @@ class CompanyAnalyzer:
         # 네이버 금융 크롤러 (lazy initialization)
         self._naver_crawler = None
         
+        # 상태 업데이트 콜백 (다이어그램 업데이트용)
+        self.status_callback = None
+        
         print("✅ CompanyAnalyzer 초기화 완료")
     
     @property
@@ -458,6 +461,10 @@ class CompanyAnalyzer:
         # 2. 벡터DB에 없으면 API로 다운로드
         print("   ⚠️  VectorDB에 없음 → DART API에서 다운로드")
         
+        # 상태 업데이트 콜백이 있으면 DART 시작 로그 전송
+        if hasattr(self, 'status_callback') and self.status_callback:
+            self.status_callback(f"🔵 DART 시작: 보고서 다운로드")
+        
         try:
             # 보고서 다운로드
             params = {
@@ -512,6 +519,10 @@ class CompanyAnalyzer:
             text_content = self._extract_text_from_xml(content)
             
             print(f"✅ 보고서 변환 완료 (Markdown: {len(text_content):,}자)")
+            
+            # 상태 업데이트 콜백이 있으면 DART 완료 로그 전송
+            if hasattr(self, 'status_callback') and self.status_callback:
+                self.status_callback(f"⚪ DART 완료: 보고서 다운로드")
             
             # 3. VectorDB에 저장
             if text_content and company_name and report_name and report_date:
@@ -1481,6 +1492,9 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
             logger.info(message)
             if status_callback:
                 status_callback(message)
+        
+        # 상태 콜백을 인스턴스 변수로 설정 (download_report에서 사용)
+        self.status_callback = status_callback
         
         result = {
             'success': False,
