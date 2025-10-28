@@ -1,0 +1,167 @@
+@startuml CompanyAnalysisAI_SequenceDiagram
+
+actor User as user
+participant "Web UI" as ui
+participant "Flask App" as flask
+participant "CompanyAnalyzer" as analyzer
+participant "VectorStore" as vectordb
+participant "NaverFinanceCrawler" as crawler
+participant "DART API" as dart
+participant "Gemini API" as gemini
+participant "Naver Finance" as naver
+
+title Company Analysis Complete Process
+
+== 1. Analysis Request ==
+user -> ui: Enter company name + question
+ui -> flask: POST /analyze_stream
+flask -> analyzer: analyze_company()
+activate analyzer
+
+== 2. Company Info Lookup ==
+analyzer -> gemini: Recommend company name variations
+gemini --> analyzer: ["Samsung Electronics", "Samsung", ...]
+analyzer -> dart: Download corpCode.xml
+dart --> analyzer: Company list
+analyzer -> analyzer: Search company corp code
+analyzer --> flask: "✅ Company info lookup complete"
+flask --> ui: SSE status update
+
+== 3. Collect DART Disclosure Reports ==
+analyzer -> gemini: Analyze user question\n(time range + report types)
+gemini --> analyzer: years=3, types=["Annual Report", "Semi-Annual"]
+analyzer -> dart: list.json (report list)
+dart --> analyzer: Report list
+
+analyzer -> vectordb: check_report_exists()
+alt VectorDB cache exists
+    vectordb --> analyzer: Return cached content
+    analyzer --> flask: "✅ Using VectorDB cache (Skip API)"
+else VectorDB cache not found
+    analyzer -> dart: Download document.xml
+    dart --> analyzer: ZIP file
+    analyzer -> analyzer: Convert XML → Markdown
+    analyzer -> vectordb: add_report()
+    vectordb -> vectordb: Split text chunks\nGenerate vector embeddings
+    analyzer --> flask: "✅ Report download complete"
+end
+
+== 4. Collect Securities Reports ==
+
+group 4-1. Identify Industry
+    analyzer -> dart: company.json (company overview)
+    dart --> analyzer: Industry code
+    alt No industry code
+        analyzer -> gemini: Infer industry
+        gemini --> analyzer: "Semiconductor, Electronics"
+    end
+end
+
+group 4-2. Stock Analysis Reports
+    analyzer -> vectordb: get_naver_reports_from_cache\n(company_name, "NAVER_COMPANY")
+    alt Cache exists (≥3)
+        vectordb --> analyzer: 3 cached stock analysis reports
+        analyzer --> flask: "✅ Using VectorDB cache (Skip crawling)"
+    else Cache not found/insufficient
+        analyzer --> flask: "🔍 Crawling Naver Finance..."
+        analyzer -> crawler: search_company_reports()
+        activate crawler
+        crawler -> gemini: Recommend company name variations
+        gemini --> crawler: ["Samsung Electronics", "Samsung", ...]
+        
+        loop Each search term
+            crawler -> naver: GET company_list.naver?\nkeyword={EUC-KR encoding}
+            naver --> crawler: HTML (search results)
+            crawler -> crawler: BeautifulSoup parsing
+            crawler -> crawler: Extract PDF URLs
+        end
+        
+        crawler -> crawler: Remove duplicates + Sort by date
+        
+        loop Selected reports
+            crawler -> naver: Download PDF
+            naver --> crawler: PDF file
+            crawler -> crawler: PyMuPDF text extraction
+        end
+        
+        crawler --> analyzer: 3 stock analysis reports
+        deactivate crawler
+        
+        analyzer -> vectordb: add_report()\n(industry_keywords=None)
+        analyzer --> flask: "✅ Collected 3 stock analysis reports"
+    end
+end
+
+group 4-3. Industry Analysis Reports
+    analyzer -> gemini: Extract industry keywords from user question
+    gemini --> analyzer: ["AI", "LLM", "Artificial Intelligence"]
+    analyzer --> flask: "✅ Extracted industry keywords: AI, LLM, AI"
+    
+    analyzer -> vectordb: get_naver_reports_from_cache\n(industry_keywords=["AI", "LLM"])
+    alt Cache exists (keyword match, ≥2)
+        vectordb -> vectordb: Check if report names contain keywords
+        vectordb --> analyzer: 2 cached industry analysis reports
+        analyzer --> flask: "✅ Using VectorDB cache (Skip crawling)"
+    else Cache not found/insufficient
+        analyzer --> flask: "🔍 Crawling Naver Finance..."
+        analyzer -> crawler: search_industry_reports\n(keywords=["AI", "LLM"])
+        activate crawler
+        
+        loop Each industry keyword
+            crawler -> naver: GET industry_list.naver?\nkeyword={EUC-KR encoding}
+            naver --> crawler: HTML (search results)
+            crawler -> crawler: BeautifulSoup parsing
+            crawler -> crawler: Extract PDF URLs
+        end
+        
+        crawler -> crawler: Remove duplicates + Sort by date
+        
+        loop Selected reports
+            crawler -> naver: Download PDF
+            naver --> crawler: PDF file
+            crawler -> crawler: PyMuPDF text extraction
+        end
+        
+        crawler --> analyzer: 2 industry analysis reports
+        deactivate crawler
+        
+        analyzer -> vectordb: add_report()\n(industry_keywords=["AI", "LLM"])
+        analyzer --> flask: "✅ Collected 2 industry analysis reports"
+    end
+end
+
+== 5. Gemini AI Comprehensive Analysis ==
+analyzer -> analyzer: Integrate all reports\n(DART + Stock + Industry)
+analyzer -> analyzer: Calculate token count\nEstimate time
+analyzer --> flask: "⏱️ Estimated time: ~3-5 min"
+analyzer -> gemini: generate_content()\n(large-scale prompt)
+activate gemini
+note right: Main report +\n5 additional DART +\n3 stock analysis +\n2 industry analysis
+gemini -> gemini: Process 1M tokens\n(1~3 min)
+gemini --> analyzer: Detailed analysis result (Markdown)
+deactivate gemini
+
+analyzer --> flask: "✅ AI analysis complete"
+flask -> flask: Convert Markdown → HTML
+
+== 6. Return Result ==
+flask --> ui: JSON result\n(analysis_html, reports, naver_reports)
+ui -> ui: Render result\n- DART disclosure report list\n- Additional DART reports\n- Stock analysis reports (securities firms)\n- Industry analysis reports (securities firms)
+ui --> user: Display analysis result
+
+== 7. Cleanup ==
+analyzer -> analyzer: cleanup_downloads()\n(Keep latest 5 only)
+deactivate analyzer
+
+note over user, naver
+  **Total Processing Time**
+  - First analysis (no cache): 3~5 min
+  - Re-analysis (with cache): 1~2 min
+  
+  **VectorDB Caching Effect**
+  - DART disclosure: Skip API calls
+  - Stock analysis: Skip crawling
+  - Industry analysis: Skip crawling via keyword matching
+end note
+
+@enduml

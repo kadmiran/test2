@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# 다운로드된 파일
+downloads/
+*.zip
+*.xml
+corp_code.zip
+CORPCODE.xml
+temp_*.xml
+
+# 보고서 출력 파일 (MD 파일)
+reports_output/
+
+# Vector DB 캐시
+vector_db/
+
+# 환경 변수 파일
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+# .vscode/settings.json은 포함 (PlantUML 설정)
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# PlantUML 생성 파일
+diagrams/*.png
+diagrams/*.svg
+diagrams/*.pdf

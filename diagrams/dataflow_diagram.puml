@@ -1,0 +1,165 @@
+@startuml CompanyAnalysisAI_DataFlow
+
+skinparam backgroundColor #FAFAFA
+skinparam note {
+    BackgroundColor #FFF9C4
+    BorderColor #F57C00
+}
+
+title Data Flow Diagram - VectorDB Caching Focus
+
+rectangle "User Input" as input {
+    (Company: "Samsung Electronics")
+    (Question: "AI business outlook?")
+}
+
+rectangle "1. Company Info Lookup" as step1 {
+    [Gemini]
+    [DART API]
+    database "Corp Code" as corpcode
+}
+
+rectangle "2. DART Disclosure Reports" as step2 {
+    rectangle "VectorDB Cache Check" as cache2 {
+        database "Metadata" as meta2
+        [Search by rcept_no]
+    }
+    
+    rectangle "Cache HIT" as hit2 {
+        [Load from VectorDB]
+        note right: Immediate use\n(Skip API call)
+    }
+    
+    rectangle "Cache MISS" as miss2 {
+        [Call DART API]
+        [XML → Markdown]
+        [Save to VectorDB]
+        note right: Download + Convert\n(20~30 sec)
+    }
+}
+
+rectangle "3. Stock Analysis Reports" as step3 {
+    rectangle "VectorDB Cache Check" as cache3 {
+        database "Metadata" as meta3
+        [Search by company_name]
+    }
+    
+    rectangle "Cache HIT" as hit3 {
+        [Load from VectorDB]
+        note right: Immediate use\n(Skip crawling)
+    }
+    
+    rectangle "Cache MISS" as miss3 {
+        [Gemini Search Recommendation]
+        [Naver Finance Crawling]
+        [PDF Download]
+        [Text Extraction]
+        [Save to VectorDB]
+        note right: Crawl + Extract\n(30~60 sec)
+    }
+}
+
+rectangle "4. Industry Analysis Reports" as step4 {
+    [Gemini Question Analysis]
+    note right: "AI business" → ["AI", "LLM"]
+    
+    rectangle "VectorDB Cache Check" as cache4 {
+        database "Metadata" as meta4
+        [Match industry_keywords]
+        note right: Report name contains\n"AI", "LLM"?
+    }
+    
+    rectangle "Cache HIT" as hit4 {
+        [Load from VectorDB]
+        note right: Keyword matching\nImmediate use
+    }
+    
+    rectangle "Cache MISS" as miss4 {
+        [Naver Finance Crawling\n(Keywords: AI, LLM)]
+        [PDF Download]
+        [Text Extraction]
+        [Save to VectorDB\n+ industry_keywords]
+        note right: Crawl + Extract\n(30~60 sec)
+    }
+}
+
+rectangle "5. Integrated Reports" as step5 {
+    storage "Main DART Report" as main
+    storage "Additional DART 5" as dart_add
+    storage "Stock Analysis 3" as company_rep
+    storage "Industry Analysis 2" as industry_rep
+}
+
+rectangle "6. Gemini AI Analysis" as step6 {
+    [Generate Prompt]
+    [Calculate Token Count]
+    [Call Gemini API]
+    note right: 1M tokens\nprocessing\n(2~5 min)
+}
+
+rectangle "7. Result Output" as output {
+    [Markdown → HTML]
+    storage "Analysis Result" as result {
+        - Executive Summary
+        - Detailed Analysis
+        - Key Metrics
+        - Conclusions & Insights
+    }
+}
+
+' Data Flow
+input --> step1
+step1 --> corpcode
+corpcode --> step2
+
+step2 --> cache2
+cache2 --> hit2
+cache2 --> miss2
+hit2 --> step5
+miss2 --> meta2
+miss2 --> step5
+
+corpcode --> step3
+step3 --> cache3
+cache3 --> hit3
+cache3 --> miss3
+hit3 --> step5
+miss3 --> meta3
+miss3 --> step5
+
+corpcode --> step4
+step4 --> cache4
+cache4 --> hit4
+cache4 --> miss4
+hit4 --> step5
+miss4 --> meta4
+miss4 --> step5
+
+step5 --> main
+step5 --> dart_add
+step5 --> company_rep
+step5 --> industry_rep
+
+main --> step6
+dart_add --> step6
+company_rep --> step6
+industry_rep --> step6
+
+step6 --> output
+output --> result
+result --> user
+
+legend right
+  |= Color |= Meaning |
+  | <back:#E8F5E9>Green</back> | Cache HIT (Fast) |
+  | <back:#FFEBEE>Red</back> | Cache MISS (Slow) |
+  | <back:#E3F2FD>Blue</back> | Database |
+  | <back:#FFF9C4>Yellow</back> | Note/Description |
+  
+  **Caching Strategy**
+  - DART: Exact match by rcept_no
+  - Stock Analysis: Filter by company_name
+  - Industry Analysis: Match by industry_keywords ⭐
+endlegend
+
+@enduml
