@@ -30,29 +30,29 @@ const architectureDiagram = {
         
         // 연결 관계 정의 (from -> to)
         const connections = [
-            // Frontend -> Server
-            { from: 'frontend', to: 'webserver', id: 'arrow-frontend-server' },
+            // 1행: Frontend <-> Server <-> DART
+            { from: 'frontend', to: 'webserver', id: 'arrow-frontend-webserver' },
+            { from: 'webserver', to: 'dart', id: 'arrow-webserver-dart' },
             
-            // Server -> DART
-            { from: 'webserver', to: 'dart', id: 'arrow-server-dart' },
+            // 2행: Server -> Midm, VectorDB, Naver
+            { from: 'webserver', to: 'midm', id: 'arrow-webserver-midm' },
+            { from: 'webserver', to: 'vectordb', id: 'arrow-webserver-vectordb' },
+            { from: 'webserver', to: 'naver', id: 'arrow-webserver-naver' },
             
-            // Server -> Midm
-            { from: 'webserver', to: 'midm', id: 'arrow-server-midm' },
+            // DART -> VectorDB (캐시 확인)
+            { from: 'dart', to: 'vectordb', id: 'arrow-dart-vectordb' },
             
-            // Server -> VectorDB
-            { from: 'webserver', to: 'vectordb', id: 'arrow-server-vectordb' },
+            // Midm -> VectorDB (질문 분석 결과)
+            { from: 'midm', to: 'vectordb', id: 'arrow-midm-vectordb' },
             
-            // Server -> Naver
-            { from: 'webserver', to: 'naver', id: 'arrow-server-naver' },
+            // Naver -> VectorDB (리포트 저장)
+            { from: 'naver', to: 'vectordb', id: 'arrow-naver-vectordb' },
             
-            // VectorDB -> Gemini
+            // VectorDB -> Gemini (데이터 제공)
             { from: 'vectordb', to: 'gemini', id: 'arrow-vectordb-gemini' },
             
             // Gemini -> Server (결과 반환)
-            { from: 'gemini', to: 'webserver', id: 'arrow-gemini-server' },
-            
-            // Server -> Frontend (결과 전달)
-            { from: 'webserver', to: 'frontend', id: 'arrow-server-frontend' }
+            { from: 'gemini', to: 'webserver', id: 'arrow-gemini-webserver' }
         ];
         
         connections.forEach(conn => {
@@ -80,20 +80,30 @@ const architectureDiagram = {
         const toX = toRect.left - containerRect.left + toRect.width / 2;
         const toY = toRect.top - containerRect.top + toRect.height / 2;
         
-        // 곡선 경로 생성 (베지어 곡선)
-        const controlPointOffset = 30;
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-        const controlX1 = fromX + dx * 0.3;
-        const controlY1 = fromY - controlPointOffset;
-        const controlX2 = fromX + dx * 0.7;
-        const controlY2 = toY - controlPointOffset;
+        // 경로 생성
+        let pathD;
+        
+        // 같은 행에 있는 경우 (수평선)
+        if (Math.abs(fromY - toY) < 20) {
+            pathD = `M ${fromX},${fromY} L ${toX},${toY}`;
+        } 
+        // 수직 또는 대각선 연결
+        else {
+            // 부드러운 곡선 경로
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const midY = fromY + dy / 2;
+            
+            // S 곡선 생성
+            pathD = `M ${fromX},${fromY} C ${fromX},${midY} ${toX},${midY} ${toX},${toY}`;
+        }
         
         const path = document.createElementNS(this.svgNS, 'path');
-        path.setAttribute('d', `M ${fromX},${fromY} C ${controlX1},${controlY1} ${controlX2},${controlY2} ${toX},${toY}`);
+        path.setAttribute('d', pathD);
         path.setAttribute('class', 'connection-arrow');
         path.setAttribute('id', arrowId);
         path.setAttribute('marker-end', 'url(#arrowhead)');
+        path.setAttribute('stroke-dasharray', '5,5');
         
         return path;
     },

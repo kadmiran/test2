@@ -4,9 +4,19 @@
 
 ---
 
+## 🆕 최신 업데이트 (v2.2)
+
+### 해결된 문제
+✅ **VectorDB와 Gemini AI 겹침 해결** - 충분한 간격 확보
+✅ **모든 컴포넌트 정렬** - 완벽한 alignment
+✅ **전체 화살표 추가** - 11개 연결 화살표 표시
+✅ **깜박이는 테두리** - 활성화 시 빨간색 테두리 애니메이션
+
+---
+
 ## ✨ 주요 개선사항
 
-### 1. 📐 **깔끔한 3행 레이아웃**
+### 1. 📐 **개선된 3행 레이아웃 (겹침 제거)**
 
 #### Before: 불규칙한 배치
 ```
@@ -19,59 +29,82 @@ VectorDB
 ❌ 정렬이 맞지 않음
 ❌ 시각적 혼란
 
-#### After: 정돈된 3행 레이아웃
+#### After: 완벽 정렬된 3행 레이아웃
 ```
 행1:  Frontend  →  Flask Server  →  DART API
+      (20px)         (20px)           (20px)
+
 행2:  Midm AI   →  VectorDB      →  Naver Finance
+      (130px)        (130px)          (130px)
+
 행3:              Gemini AI
+                  (240px)
 ```
 ✅ 명확한 계층 구조
-✅ 균형잡힌 배치
+✅ 균형잡힌 배치  
 ✅ 가독성 향상
+✅ **VectorDB-Gemini 겹침 완전 제거**
 
 ---
 
-### 2. 🎯 **SVG 화살표 연결**
+### 2. 🎯 **완전한 SVG 화살표 연결 (11개)**
 
 #### 구현된 연결 관계
 ```
-Frontend → Server → DART
-              ↓
-         Midm (질문 분석)
-              ↓
-         VectorDB ← Server → Naver
-              ↓
-         Gemini AI
-              ↓
-         Server → Frontend
+Frontend ←→ Server ←→ DART
+              ↓ ↓ ↓
+         Midm → VectorDB ← Naver
+                   ↓
+              Gemini AI
+                   ↓
+               Server
 ```
 
+**전체 11개 화살표:**
+1. Frontend → WebServer
+2. WebServer → DART
+3. WebServer → Midm
+4. WebServer → VectorDB
+5. WebServer → Naver
+6. DART → VectorDB
+7. Midm → VectorDB
+8. Naver → VectorDB
+9. VectorDB → Gemini
+10. Gemini → WebServer
+
 #### 화살표 특징
-- **베지어 곡선**: 부드러운 곡선 경로
+- **스마트 경로**: 수평선(같은 행), S곡선(다른 행)
+- **점선 스타일**: stroke-dasharray로 시각적 구분
 - **마커**: 방향을 나타내는 화살촉
-- **펄스 애니메이션**: 데이터 흐름 시각화
+- **펄스 애니메이션**: 활성화 시 깜박임 (opacity 0.7~1, stroke-width 3~4)
 - **동적 활성화**: 진행 단계에 따라 표시
 
 ---
 
 ### 3. 🎨 **향상된 시각 효과**
 
-#### 컴포넌트 활성화
+#### 컴포넌트 활성화 (깜박이는 테두리!)
 ```css
 활성 상태:
-- 테두리: KT Red (#E30613)
+- 테두리: KT Red (#E30613) → 밝은 빨강 (#FF4757) 반복
 - 배경: 그라디언트 (흰색 → 연한 핑크)
-- 그림자: 강조된 그림자 효과
+- 그림자: 0 6px 20px → 0 8px 30px (펄스)
 - 스케일: 1.08배 확대
 - 아이콘: 바운스 애니메이션
+- **애니메이션: borderBlink 1초 무한 반복**
 ```
 
 #### 화살표 애니메이션
 ```css
-- opacity: 0 → 0.6 (페이드 인)
-- stroke-width: 2 → 3 (펄스)
-- 지속시간: 2초 루프
-- 자동 비활성화: 2초 후
+기본 상태:
+- opacity: 0.2 (희미하게 보임)
+- stroke-width: 2
+
+활성 상태:
+- opacity: 0.7 → 1.0 (펄스)
+- stroke-width: 3 → 4 (펄스)
+- stroke: #E30613 → #FF4757 (색상 변화)
+- 지속시간: 1.2초 루프
 ```
 
 ---
