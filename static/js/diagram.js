@@ -20,6 +20,7 @@ const architectureDiagram = {
             'naver': document.getElementById('comp-naver'),
             'vectordb': document.getElementById('comp-vectordb'),
             'midm': document.getElementById('comp-midm'),
+            'perplexity': document.getElementById('comp-perplexity'),
             'gemini': document.getElementById('comp-gemini')
         };
         
@@ -73,12 +74,14 @@ const architectureDiagram = {
             { from: 'dart', to: 'vectordb', id: 'arrow-dart-vectordb' },
             { from: 'naver', to: 'vectordb', id: 'arrow-naver-vectordb' },
             
-            // VectorDB → 3행 (Midm, Gemini)
+            // VectorDB → 3행 (Midm, Perplexity, Gemini)
             { from: 'vectordb', to: 'midm', id: 'arrow-vectordb-midm' },
+            { from: 'vectordb', to: 'perplexity', id: 'arrow-vectordb-perplexity' },
             { from: 'vectordb', to: 'gemini', id: 'arrow-vectordb-gemini' },
             
-            // 3행 내부
-            { from: 'midm', to: 'gemini', id: 'arrow-midm-gemini' },
+            // 3행 내부 (Midm → Perplexity → Gemini)
+            { from: 'midm', to: 'perplexity', id: 'arrow-midm-perplexity' },
+            { from: 'perplexity', to: 'gemini', id: 'arrow-perplexity-gemini' },
             
             // Gemini → Server (결과 반환)
             { from: 'gemini', to: 'webserver', id: 'arrow-gemini-webserver' }
@@ -250,6 +253,7 @@ const architectureDiagram = {
 const componentMap = {
     'dart': { name: 'dart', connections: ['webserver', 'dart'] },
     'midm': { name: 'midm', connections: ['webserver', 'vectordb', 'midm'] },
+    'perplexity': { name: 'perplexity', connections: ['webserver', 'vectordb', 'perplexity'] },
     'naver': { name: 'naver', connections: ['webserver', 'naver'] },
     'vectordb': { name: 'vectordb', connections: ['webserver', 'vectordb'] },
     'gemini': { name: 'gemini', connections: ['vectordb', 'gemini'] }
@@ -274,41 +278,38 @@ function updateDiagramFromMessage(message) {
     }
     
     // 🔵 시작 로그 처리 (통합)
-    const startMatch = msg.match(/🔵\s*(dart|midm|naver|vectordb|gemini)/);
+    const startMatch = msg.match(/🔵\s*(dart|midm|perplexity|naver|vectordb|gemini)/);
     if (startMatch) {
         const component = startMatch[1];
         const statusMap = {
             'dart': '처리중',
             'midm': '질문 분석',
+            'perplexity': '질문 분석',
             'naver': '크롤링중',
             'vectordb': '처리중',
             'gemini': 'AI 분석중'
         };
         
-        // midm 로그는 gemini로 처리 (실제로는 Gemini 사용)
-        const actualComponent = component === 'midm' ? 'gemini' : component;
-        architectureDiagram.activate(actualComponent, statusMap[component]);
+        architectureDiagram.activate(component, statusMap[component]);
         
         // 연결 화살표 표시
-        if (component === 'midm' || component === 'gemini') {
+        if (component === 'midm' || component === 'perplexity' || component === 'gemini') {
             architectureDiagram.showConnection('webserver', 'vectordb', 0);
-            architectureDiagram.showConnection('vectordb', 'gemini', 0);
+            architectureDiagram.showConnection('vectordb', component, 0);
         } else {
             architectureDiagram.showConnection('webserver', component, 0);
         }
     }
     
     // ⚪ 완료 로그 처리 (통합)
-    const endMatch = msg.match(/⚪\s*(dart|midm|naver|vectordb|gemini)/);
+    const endMatch = msg.match(/⚪\s*(dart|midm|perplexity|naver|vectordb|gemini)/);
     if (endMatch) {
         const component = endMatch[1];
-        // midm 로그는 gemini로 처리 (실제로는 Gemini 사용)
-        const actualComponent = component === 'midm' ? 'gemini' : component;
         setTimeout(() => {
-            architectureDiagram.deactivate(actualComponent, '완료');
+            architectureDiagram.deactivate(component, '완료');
             
             // Gemini 완료 시 결과 반환
-            if (component === 'gemini' || component === 'midm') {
+            if (component === 'gemini' || component === 'perplexity' || component === 'midm') {
                 architectureDiagram.showConnection('gemini', 'webserver', 2000);
             }
         }, 800);
@@ -317,7 +318,7 @@ function updateDiagramFromMessage(message) {
     // 전체 분석 완료
     if (msg.includes('전체 분석 완료') || msg.includes('분석이 완료되었습니다')) {
         setTimeout(() => {
-            ['frontend', 'webserver', 'dart', 'naver', 'vectordb', 'midm', 'gemini'].forEach(comp => {
+            ['frontend', 'webserver', 'dart', 'naver', 'vectordb', 'midm', 'perplexity', 'gemini'].forEach(comp => {
                 architectureDiagram.deactivate(comp, '대기중');
             });
         }, 2000);

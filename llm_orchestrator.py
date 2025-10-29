@@ -49,8 +49,13 @@ class GeminiProvider(LLMProvider):
             api_key: Gemini API 키
             model_candidates: 시도할 모델 리스트
         """
+        print("   🔑 Gemini API 키 설정 중...")
         genai.configure(api_key=api_key)
+        print("   ✅ Gemini API 키 설정 완료")
+        
+        print("   🤖 Gemini 모델 초기화 중...")
         self.model = self._initialize_model(model_candidates or ['gemini-2.5-pro-preview-03-25', 'gemini-pro'])
+        print("   ✅ Gemini 모델 초기화 완료")
     
     def _initialize_model(self, candidates):
         """사용 가능한 Gemini 모델 자동 선택"""
@@ -124,14 +129,16 @@ class MidmProvider(LLMProvider):
         Reference:
             https://friendli.ai/docs/guides/dedicated_endpoints/quickstart
         """
+        print("   🔑 Midm API 토큰 설정 중...")
         self.api_token = api_token
         self.base_url = base_url.rstrip('/')
         self.endpoint_id = endpoint_id
         self.api_url = f"{self.base_url}/chat/completions"
+        print("   ✅ Midm API 토큰 설정 완료")
         
-        print(f"🔧 Midm Provider 초기화 완료")
-        print(f"   Endpoint ID: {endpoint_id}")
-        print(f"   API URL: {self.api_url}")
+        print(f"   🔧 Midm Provider 초기화 완료")
+        print(f"   📍 Endpoint ID: {endpoint_id}")
+        print(f"   🌐 API URL: {self.api_url}")
     
     def generate_content(self, prompt: str, **kwargs) -> str:
         """
@@ -220,6 +227,140 @@ class MidmProvider(LLMProvider):
             'supports_korean': True,
             'cost': 'low',
             'speed': 'very_fast'  # Dedicated endpoint라 빠름
+        }
+
+
+class PerplexityProvider(LLMProvider):
+    """Perplexity AI Provider"""
+    
+    def __init__(self, api_key: str):
+        """
+        Perplexity Provider 초기화
+        
+        Args:
+            api_key: Perplexity API 키
+        
+        Reference:
+            https://docs.perplexity.ai/
+        """
+        print("   🔑 Perplexity API 키 설정 중...")
+        self.api_key = api_key
+        self.api_url = "https://api.perplexity.ai/chat/completions"
+        print("   ✅ Perplexity API 키 설정 완료")
+        
+        print(f"   🔧 Perplexity Provider 초기화 완료")
+        print(f"   🌐 API URL: {self.api_url}")
+    
+    def generate_content(self, prompt: str, **kwargs) -> str:
+        """
+        텍스트 생성
+        
+        Args:
+            prompt: 생성할 프롬프트
+            **kwargs: 추가 파라미터 (max_tokens, temperature, top_p 등)
+        
+        Returns:
+            생성된 텍스트
+        """
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            }
+            
+            payload = {
+                "model": "sonar",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "max_tokens": kwargs.get('max_tokens', 512),
+                "temperature": kwargs.get('temperature', 0.7),
+                "top_p": kwargs.get('top_p', 0.9),
+            }
+            
+            # 디버깅용 로그
+            print(f"   🔍 Perplexity API 요청 디버깅:")
+            print(f"   📍 URL: {self.api_url}")
+            print(f"   🔑 API Key: {self.api_key[:10]}...")
+            print(f"   📦 Payload: {payload}")
+            
+            response = requests.post(
+                self.api_url,
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                error_msg = f"HTTP {response.status_code}"
+                try:
+                    error_detail = response.json()
+                    print(f"   📋 Perplexity API 응답 상세: {error_detail}")
+                    if 'error' in error_detail:
+                        error_msg += f": {error_detail['error']}"
+                    else:
+                        error_msg += f": {error_detail}"
+                except:
+                    error_msg += f": {response.text[:500]}"
+                    print(f"   📋 Perplexity API 원본 응답: {response.text[:500]}")
+                print(f"   ❌ Perplexity API 오류: {error_msg}")
+                print(f"   📋 요청 payload: {payload}")
+                
+                # 특정 에러 코드에 대한 처리
+                if response.status_code == 401:
+                    raise ValueError("Perplexity API 키가 유효하지 않습니다.")
+                elif response.status_code == 429:
+                    raise ValueError("Perplexity API 할당량을 초과했습니다.")
+                elif response.status_code == 400:
+                    raise ValueError("Perplexity API 요청이 잘못되었습니다.")
+                else:
+                    raise ValueError(f"Perplexity API 오류: {error_msg}")
+            
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Perplexity API 응답 형식: choices[0].message.content
+            if 'choices' in result and len(result['choices']) > 0:
+                message = result['choices'][0].get('message', {})
+                content = message.get('content', '')
+                if content:
+                    return content.strip()
+                else:
+                    raise ValueError("Perplexity API에서 빈 응답을 받았습니다.")
+            else:
+                raise ValueError(f"Perplexity API 응답에 choices가 없습니다: {result}")
+                
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Perplexity API 요청 오류: {e}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    error_msg += f"\n   상세: {error_detail}"
+                except:
+                    error_msg += f"\n   응답: {e.response.text[:300]}"
+            print(f"❌ {error_msg}")
+            raise
+        except Exception as e:
+            print(f"❌ Perplexity API 처리 오류: {e}")
+            raise
+    
+    def get_name(self) -> str:
+        """Provider 이름 반환"""
+        return "perplexity"
+    
+    def get_capabilities(self) -> dict:
+        """Provider 능력 반환"""
+        return {
+            'context_window': 128_000,  # Perplexity 128k 모델
+            'supports_long_context': True,
+            'supports_korean': True,
+            'cost': 'medium',
+            'speed': 'fast',
+            'supports_web_search': True  # Perplexity의 주요 특징
         }
 
 
@@ -334,62 +475,4 @@ class LLMOrchestrator:
         ]
 
 
-# 향후 추가 가능한 Provider 예시:
-"""
-class OpenAIProvider(LLMProvider):
-    '''OpenAI GPT Provider'''
-    
-    def __init__(self, api_key: str, model: str = "gpt-4"):
-        import openai
-        self.client = openai.OpenAI(api_key=api_key)
-        self.model = model
-    
-    def generate_content(self, prompt: str, **kwargs) -> str:
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
-    
-    def get_name(self) -> str:
-        return "openai"
-    
-    def get_capabilities(self) -> dict:
-        return {
-            'context_window': 128_000,
-            'supports_long_context': True,
-            'supports_korean': True,
-            'cost': 'high',
-            'speed': 'medium'
-        }
-
-
-class ClaudeProvider(LLMProvider):
-    '''Anthropic Claude Provider'''
-    
-    def __init__(self, api_key: str, model: str = "claude-3-opus-20240229"):
-        import anthropic
-        self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = model
-    
-    def generate_content(self, prompt: str, **kwargs) -> str:
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.content[0].text
-    
-    def get_name(self) -> str:
-        return "claude"
-    
-    def get_capabilities(self) -> dict:
-        return {
-            'context_window': 200_000,
-            'supports_long_context': True,
-            'supports_korean': True,
-            'cost': 'high',
-            'speed': 'medium'
-        }
-"""
 

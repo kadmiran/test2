@@ -646,8 +646,13 @@ textarea {
     right: 40px; 
 }
 
-/* 3행 (360px): Midm, Gemini (우측) */
+/* 3행 (360px): Midm, Perplexity, Gemini (우측) */
 .comp-midm { 
+    top: 360px; 
+    right: 380px; 
+}
+
+.comp-perplexity { 
     top: 360px; 
     right: 220px; 
 }
@@ -784,8 +789,13 @@ textarea {
         right: 15px; 
     }
 
-    /* 3행: Midm, Gemini */
+    /* 3행: Midm, Perplexity, Gemini */
     .comp-midm { 
+        top: 290px; 
+        right: 195px; 
+    }
+
+    .comp-perplexity { 
         top: 290px; 
         right: 105px; 
     }
@@ -794,5 +804,70 @@ textarea {
         top: 290px; 
         right: 15px; 
     }
+}
+
+/* Toggle Switch Styles */
+.toggle-container {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 50px;
+    height: 24px;
+    background: #ccc;
+    border-radius: 24px;
+    transition: background 0.3s;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider {
+    background: #E30613;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(26px);
+}
+
+.toggle-text {
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.toggle-description {
+    font-size: 12px;
+    color: #666;
+    margin-left: 62px;
+    line-height: 1.4;
 }
 

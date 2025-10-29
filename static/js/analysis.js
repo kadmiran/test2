@@ -26,6 +26,7 @@ async function handleAnalysisSubmit(e) {
 
     const companyName = document.getElementById('companyName').value;
     const userQuery = document.getElementById('userQuery').value;
+    const excludeOpinions = document.getElementById('excludeOpinions').checked;
     const sessionId = Date.now().toString();
     currentSessionId = sessionId;
 
@@ -60,7 +61,8 @@ async function handleAnalysisSubmit(e) {
             body: JSON.stringify({
                 company_name: companyName,
                 user_query: userQuery,
-                session_id: sessionId
+                session_id: sessionId,
+                exclude_opinions: excludeOpinions
             })
         });
 

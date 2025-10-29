@@ -7,7 +7,7 @@ Flask를 사용한 로컬 서버
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_file
 from company_analyzer import CompanyAnalyzer
-from llm_orchestrator import LLMOrchestrator, GeminiProvider, MidmProvider
+from llm_orchestrator import LLMOrchestrator, GeminiProvider, MidmProvider, PerplexityProvider
 from config import config
 import os
 import json
@@ -29,30 +29,40 @@ import re
 
 # 로깅 설정
 logging.basicConfig(
-    level=getattr(logging, config.LOG_LEVEL),
-    format=config.LOG_FORMAT
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+print("=" * 60)
+print("🚀 기업 분석 AI 애플리케이션 시작")
+print("=" * 60)
+
 # API 키 유효성 검증
+print("🔑 API 키 유효성 검증 중...")
 if not config.validate_api_keys():
     logger.error("API 키가 제대로 설정되지 않았습니다. config.py를 확인하세요.")
     raise ValueError("API 키 설정 오류")
+print("✅ API 키 검증 완료")
 
 # LLM Orchestrator 초기화
-logger.info("🤖 LLM Orchestrator 초기화 중...")
+print("🤖 LLM Orchestrator 초기화 중...")
 llm_orchestrator = LLMOrchestrator()
+print("✅ LLM Orchestrator 초기화 완료")
 
 # Gemini Provider 등록
+print("✨ Gemini Provider 등록 중...")
 gemini_provider = GeminiProvider(
     api_key=config.get_gemini_api_key(),
     model_candidates=config.GEMINI_MODEL_CANDIDATES
 )
-llm_orchestrator.register_provider(gemini_provider, is_default=True)
+llm_orchestrator.register_provider(gemini_provider)
+print("✅ Gemini Provider 등록 완료")
 
 # Midm Provider 등록 (검색어 제안용)
+print("🤖 Midm Provider 등록 중...")
 if config.FRIENDLI_TOKEN and config.FRIENDLI_ENDPOINT_ID:
     midm_provider = MidmProvider(
         api_token=config.FRIENDLI_TOKEN,
@@ -60,27 +70,48 @@ if config.FRIENDLI_TOKEN and config.FRIENDLI_ENDPOINT_ID:
         endpoint_id=config.FRIENDLI_ENDPOINT_ID
     )
     llm_orchestrator.register_provider(midm_provider)
+    print("✅ Midm Provider 등록 완료")
 else:
-    logger.warning("⚠️  Friendli 설정이 없어 Midm Provider를 건너뜁니다.")
-    logger.warning("   검색어 제안에는 기본 Provider(Gemini)가 사용됩니다.")
+    print("⚠️  Friendli 설정이 없어 Midm Provider를 건너뜁니다.")
+
+# Perplexity Provider 등록 (질문 분석용)
+print("🔍 Perplexity Provider 등록 중...")
+if config.PERPLEXITY_API_KEY:
+    perplexity_provider = PerplexityProvider(
+        api_key=config.get_perplexity_api_key()
+    )
+    llm_orchestrator.register_provider(perplexity_provider, is_default=True)
+    print("✅ Perplexity Provider 등록 완료 (기본 Provider)")
+else:
+    print("⚠️  Perplexity API 키가 설정되지 않았습니다.")
+    print("   질문 분석에는 기본 Provider(Gemini)가 사용됩니다.")
 
 # 작업별 라우팅 설정
-logger.info("🔀 LLM 작업별 라우팅 설정 중...")
+print("🔀 LLM 작업별 라우팅 설정 중...")
 for task_type, provider_name in config.LLM_TASK_ROUTING.items():
     try:
         llm_orchestrator.set_task_routing(task_type, provider_name)
-        logger.info(f"   ✅ {task_type} → {provider_name}")
+        print(f"   ✅ {task_type} → {provider_name}")
     except ValueError as e:
-        logger.warning(f"   ❌ 라우팅 설정 실패: {e}")
+        print(f"   ❌ 라우팅 설정 실패: {e}")
+print("✅ 라우팅 설정 완료")
 
-logger.info("✅ LLM Orchestrator 초기화 완료")
+print("✅ LLM Orchestrator 초기화 완료")
 
 # CompanyAnalyzer 인스턴스 생성 (LLM Orchestrator 주입)
+print("🏢 CompanyAnalyzer 초기화 중...")
 analyzer = CompanyAnalyzer(config.get_dart_api_key(), llm_orchestrator)
+print("✅ CompanyAnalyzer 초기화 완료")
 
 # 상태 업데이트를 위한 큐 및 결과 저장
+print("📊 상태 관리 시스템 초기화 중...")
 status_queues = {}
 analysis_results = {}
+print("✅ 상태 관리 시스템 초기화 완료")
+
+print("=" * 60)
+print("🎉 모든 초기화 완료! 서버를 시작합니다...")
+print("=" * 60)
 
 @app.route('/')
 def index():
@@ -95,6 +126,7 @@ def analyze_stream():
         company_name = data.get('company_name', '').strip()
         user_query = data.get('user_query', '').strip()
         session_id = data.get('session_id', str(time.time()))
+        exclude_opinions = data.get('exclude_opinions', False)
         
         logger.info(f"분석 요청 시작 - 회사: {company_name}, 세션: {session_id}")
         
@@ -125,7 +157,7 @@ def analyze_stream():
         
         def run_analysis():
             try:
-                result = analyzer.analyze_company(company_name, user_query, status_callback)
+                result = analyzer.analyze_company(company_name, user_query, status_callback, exclude_opinions)
                 analysis_results[session_id] = result  # 결과 저장
                 status_queue.put('__DONE__')
                 logger.info(f"분석 완료 - 세션: {session_id}")
@@ -476,15 +508,8 @@ if __name__ == '__main__':
         os.makedirs('templates')
     
     # Flask reloader가 메인 프로세스에서만 메시지 출력
-    import sys
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        print("=" * 60)
-        print("🚀 회사 분석 애플리케이션 시작")
-        print("=" * 60)
         print(f"📍 접속 URL: http://localhost:{config.FLASK_PORT}")
-        print("📋 DART API Key: " + config.DART_API_KEY[:10] + "...")
-        print("🤖 Gemini API Key: " + config.GEMINI_API_KEY[:10] + "...")
-        print("=" * 60)
         print(f"\n브라우저에서 http://localhost:{config.FLASK_PORT} 으로 접속하세요.\n")
         print("종료하려면 Ctrl+C 를 누르세요.\n")
     

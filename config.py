@@ -53,25 +53,25 @@ class Config:
         'depu7a0f8bsrscw'
     )
     
-    # 향후 추가할 LLM API Keys (선택사항)
-    OPENAI_API_KEY: str = os.getenv('OPENAI_API_KEY', '')
-    CLAUDE_API_KEY: str = os.getenv('CLAUDE_API_KEY', '')
+    # Perplexity AI Settings
+    PERPLEXITY_API_KEY: str = os.getenv(
+        'PERPLEXITY_API_KEY',
+        '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'
+    )
+    
     
     # ============================================
     # LLM Orchestrator Settings
     # ============================================
     
     # 기본 LLM Provider
-    DEFAULT_LLM_PROVIDER: str = 'midm'  # 테스트용으로 Midm 사용 (원래는 'gemini')
+    DEFAULT_LLM_PROVIDER: str = 'perplexity'  # Perplexity 사용 (웹 검색 지원)
     
     # 작업별 LLM 라우팅 (task_type -> provider_name)
     LLM_TASK_ROUTING: dict = {
-        'query_analysis': 'gemini',         # 질문 분석은 Gemini 사용 (정확도 높음)
+        'query_analysis': 'perplexity',     # 질문 분석은 Perplexity 사용 (웹 검색 지원)
         'long_context_analysis': 'gemini',  # 긴 맥락 분석은 Gemini 사용
-        'name_variation': 'midm',           # 검색어 제안은 Midm 사용 (빠름)
-        # 향후 추가:
-        # 'quick_analysis': 'openai',
-        # 'summary': 'claude',
+        'name_variation': 'perplexity',     # 검색어 제안은 Perplexity 사용 (Midm 서버 다운)
     }
     
     # ============================================
@@ -99,8 +99,6 @@ class Config:
         'gemini-1.5-flash',
     ]
     
-    # Gemini Context Window (토큰 수)
-    GEMINI_CONTEXT_WINDOW: int = 1_000_000
     
     # ============================================
     # Vector Store Settings (VectorDB)
@@ -137,8 +135,6 @@ class Config:
     # 크롤링 User-Agent
     CRAWLER_USER_AGENT: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     
-    # PDF 인코딩
-    NAVER_ENCODING: str = 'euc-kr'
     
     # ============================================
     # Download Settings
@@ -147,8 +143,6 @@ class Config:
     # 다운로드 폴더
     DOWNLOAD_DIR: str = 'downloads'
     
-    # 다운로드 파일 보관 개수 (최신 N개만 유지)
-    KEEP_LATEST_DOWNLOADS: int = 5
     
     # ============================================
     # Report Settings
@@ -169,15 +163,6 @@ class Config:
     # 추가 보고서 최대 문자 수
     MAX_ADDITIONAL_REPORT_CHARS: int = 200_000
     
-    # ============================================
-    # Time Range Settings
-    # ============================================
-    
-    # 기본 검색 기간 (년)
-    DEFAULT_SEARCH_YEARS: int = 3
-    
-    # 최대 검색 기간 (년)
-    MAX_SEARCH_YEARS: int = 10
     
     # ============================================
     # Flask Server Settings
@@ -192,15 +177,6 @@ class Config:
     # Flask Port
     FLASK_PORT: int = int(os.getenv('FLASK_PORT', '5000'))
     
-    # ============================================
-    # Logging Settings
-    # ============================================
-    
-    # 로그 레벨
-    LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
-    
-    # 로그 포맷
-    LOG_FORMAT: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     
     # ============================================
     # Supported Report Types (DART)
@@ -234,6 +210,11 @@ class Config:
         return cls.GEMINI_API_KEY
     
     @classmethod
+    def get_perplexity_api_key(cls) -> str:
+        """Perplexity API 키 반환"""
+        return cls.PERPLEXITY_API_KEY
+    
+    @classmethod
     def get_vector_db_path(cls) -> str:
         """VectorDB 경로 반환"""
         return cls.VECTOR_DB_DIR
@@ -259,55 +240,16 @@ class Config:
             print("❌ Gemini API 키가 설정되지 않았습니다.")
             return False
         
+        if not cls.PERPLEXITY_API_KEY or cls.PERPLEXITY_API_KEY == '':
+            print("❌ Perplexity API 키가 설정되지 않았습니다.")
+            return False
+        
         return True
     
-    @classmethod
-    def print_config(cls, hide_keys: bool = True) -> None:
-        """
-        현재 설정 출력 (디버깅용)
-        
-        Args:
-            hide_keys: True면 API 키를 마스킹하여 출력
-        """
-        print("\n" + "="*50)
-        print("📋 Current Configuration")
-        print("="*50)
-        
-        # API Keys
-        if hide_keys:
-            dart_key = cls.DART_API_KEY[:10] + "..." if cls.DART_API_KEY else "NOT SET"
-            gemini_key = cls.GEMINI_API_KEY[:10] + "..." if cls.GEMINI_API_KEY else "NOT SET"
-        else:
-            dart_key = cls.DART_API_KEY
-            gemini_key = cls.GEMINI_API_KEY
-        
-        print(f"DART API Key: {dart_key}")
-        print(f"Gemini API Key: {gemini_key}")
-        print(f"\nVector DB Dir: {cls.VECTOR_DB_DIR}")
-        print(f"Download Dir: {cls.DOWNLOAD_DIR}")
-        print(f"\nFlask Host: {cls.FLASK_HOST}")
-        print(f"Flask Port: {cls.FLASK_PORT}")
-        print(f"Flask Debug: {cls.FLASK_DEBUG}")
-        print(f"\nMax Reports:")
-        print(f"  - Main Report: {cls.MAX_MAIN_REPORT_CHARS:,} chars")
-        print(f"  - Additional DART: {cls.MAX_ADDITIONAL_REPORTS} reports")
-        print(f"  - Company Reports: {cls.MAX_COMPANY_REPORTS} reports")
-        print(f"  - Industry Reports: {cls.MAX_INDUSTRY_REPORTS} reports")
-        print("="*50 + "\n")
 
 
 # 설정 인스턴스 생성 (싱글톤 패턴)
 config = Config()
 
 
-# 모듈 임포트 시 API 키 유효성 검증 (선택적)
-if __name__ == "__main__":
-    # 직접 실행 시 설정 정보 출력
-    config.print_config(hide_keys=False)
-    
-    # API 키 유효성 검증
-    if config.validate_api_keys():
-        print("✅ 모든 API 키가 정상적으로 설정되었습니다.")
-    else:
-        print("❌ API 키 설정을 확인해주세요.")
 

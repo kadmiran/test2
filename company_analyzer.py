@@ -51,25 +51,19 @@ class CompanyAnalyzer:
         
         # 상태 업데이트 콜백 (다이어그램 업데이트용)
         self.status_callback = None
-        
-        print("✅ CompanyAnalyzer 초기화 완료")
     
     @property
     def vector_store(self):
         """VectorStore lazy initialization - 처음 접근할 때만 생성"""
         if self._vector_store is None:
-            print("📦 벡터 데이터베이스 초기화 중...")
             self._vector_store = VectorStore()
-            print("✅ 벡터 데이터베이스 초기화 완료")
         return self._vector_store
     
     @property
     def naver_crawler(self):
         """NaverFinanceCrawler lazy initialization - 처음 접근할 때만 생성"""
         if self._naver_crawler is None:
-            print("📊 네이버 금융 크롤러 초기화 중...")
             self._naver_crawler = NaverFinanceCrawler(llm_orchestrator=self.llm_orchestrator)
-            print("✅ 네이버 금융 크롤러 초기화 완료")
         return self._naver_crawler
         
     def _get_company_name_variations(self, company_name):
@@ -84,6 +78,13 @@ class CompanyAnalyzer:
         """
         try:
             prompt = self.prompt_manager.get_prompt('name_variation', company_name=company_name)
+            
+            # Full prompt 로그 출력
+            logger.info("=" * 60)
+            logger.info("📝 FULL PROMPT (Name Variation)")
+            logger.info("=" * 60)
+            logger.info(prompt)
+            logger.info("=" * 60)
             
             variations_text = self.llm_orchestrator.generate(
                 prompt=prompt,
@@ -183,11 +184,11 @@ class CompanyAnalyzer:
                 if with_stock:
                     # 종목코드가 있는 것 중 첫 번째
                     result = with_stock[0]
-                    print(f"   ✅ 최종 선택 (종목코드 있음): {result[1]} (고유번호: {result[0]}, 종목: {result[2]})")
+                    logger.info(f"최종 선택 (종목코드 있음): {result[1]} (고유번호: {result[0]}, 종목: {result[2]})")
                 else:
                     # 종목코드가 없어도 첫 번째 선택
                     result = exact_matches[0]
-                    print(f"   ⚠️  최종 선택 (종목코드 없음): {result[1]} (고유번호: {result[0]})")
+                    logger.info(f"최종 선택 (종목코드 없음): {result[1]} (고유번호: {result[0]})")
                 
                 # 임시 파일 정리
                 for file in ['corp_code.zip', 'CORPCODE.xml']:
@@ -197,7 +198,7 @@ class CompanyAnalyzer:
                 return result
             
             # 2단계: 정확히 일치하는 것이 없으면 포함되는 경우 검색
-            print(f"2단계: 변형 검색어를 포함하는 회사 검색 중...")
+            logger.info("2단계: 변형 검색어를 포함하는 회사 검색 중...")
             contains_matches = []
             
             # 모든 변형에 대해 포함 검색
@@ -224,11 +225,8 @@ class CompanyAnalyzer:
                     os.remove(file)
             
             if contains_matches:
-                print(f"⚠️  정확히 일치하는 '{company_name}'는 없습니다.")
-                print(f"   유사한 회사 {len(contains_matches)}개 발견:")
-                
-                for i, c in enumerate(contains_matches[:5], 1):
-                    print(f"   [{i}] {c[1]} (종목코드: {c[2]})")
+                logger.warning(f"정확히 일치하는 '{company_name}'는 없습니다.")
+                logger.info(f"유사한 회사 {len(contains_matches)}개 발견")
                 
                 # 종목코드가 있는 것 우선
                 with_stock = [c for c in contains_matches if c[2] and c[2].strip()]
@@ -237,14 +235,14 @@ class CompanyAnalyzer:
                 else:
                     result = contains_matches[0]
                 
-                print(f"   → 첫 번째 후보 선택: {result[1]}")
+                logger.info(f"첫 번째 후보 선택: {result[1]}")
                 return result
             else:
-                print(f"❌ '{company_name}' 회사를 찾을 수 없습니다.")
+                logger.error(f"'{company_name}' 회사를 찾을 수 없습니다.")
                 return None
                 
         except Exception as e:
-            print(f"❌ 오류: {e}")
+            logger.error(f"회사 검색 오류: {e}")
             return None
     
     def _extract_time_range(self, user_query):
@@ -258,9 +256,16 @@ class CompanyAnalyzer:
             int: 검색할 연수 (기본값: 3년)
         """
         try:
-            print(f"📅 Gemini에게 시간 범위 분석 요청 중...")
+            logger.info("Gemini에게 시간 범위 분석 요청 중...")
             
             prompt = self.prompt_manager.get_prompt('time_range_extraction', user_query=user_query)
+            
+            # Full prompt 로그 출력
+            logger.info("=" * 60)
+            logger.info("📝 FULL PROMPT (Time Range Extraction)")
+            logger.info("=" * 60)
+            logger.info(prompt)
+            logger.info("=" * 60)
             
             response_text = self.llm_orchestrator.generate(
                 prompt=prompt,
@@ -284,19 +289,15 @@ class CompanyAnalyzer:
                 years = min(years, 10)
                 years = max(years, 1)  # 최소 1년
                 
-                print(f"   ✅ 추출된 기간: {years}년")
-                print(f"   💡 이유: {reason}")
+                logger.info(f"추출된 기간: {years}년 - {reason}")
                 
                 return years
             else:
-                print(f"   ⚠️  JSON 파싱 실패, 기본값 3년 사용")
-                print(f"   📄 응답 내용: {response_text[:200]}")
+                logger.warning(f"JSON 파싱 실패, 기본값 3년 사용 - 응답: {response_text[:200]}")
                 return 3
                 
         except Exception as e:
-            print(f"   ⚠️  시간 범위 추출 실패: {e}")
-            import traceback
-            print(f"   📝 상세 오류: {traceback.format_exc()[:500]}")
+            logger.warning(f"시간 범위 추출 실패: {e}")
             return 3  # 기본값
     
     def _recommend_report_types(self, user_query, years=3):
@@ -311,9 +312,16 @@ class CompanyAnalyzer:
             list: 추천된 보고서 타입 리스트
         """
         try:
-            print(f"🤖 Gemini에게 적절한 보고서 타입 추천 요청 중...")
+            logger.info("Gemini에게 적절한 보고서 타입 추천 요청 중...")
             
             prompt = self.prompt_manager.get_prompt('report_type_recommendation', user_query=user_query)
+            
+            # Full prompt 로그 출력
+            logger.info("=" * 60)
+            logger.info("📝 FULL PROMPT (Report Type Recommendation)")
+            logger.info("=" * 60)
+            logger.info(prompt)
+            logger.info("=" * 60)
             
             response_text = self.llm_orchestrator.generate(
                 prompt=prompt,
@@ -336,25 +344,21 @@ class CompanyAnalyzer:
                 
                 # 추천 타입이 비어있으면 기본값 사용
                 if not recommended_types:
-                    print(f"   ⚠️  추천된 타입이 없음, 기본 보고서 타입 사용")
+                    logger.warning("추천된 타입이 없음, 기본 보고서 타입 사용")
                     recommended_types = ['사업보고서', '반기보고서']
                 
-                print(f"   ✅ 추천된 보고서 타입: {recommended_types}")
-                print(f"   💡 이유: {reason}")
+                logger.info(f"추천된 보고서 타입: {recommended_types} - {reason}")
                 if need_historical:
-                    print(f"   📚 여러 해의 보고서 필요: Yes")
+                    logger.info("여러 해의 보고서 필요")
                 
                 # 튜플로 반환 (타입 리스트, 연도별 보고서 필요 여부)
                 return recommended_types, need_historical
             else:
-                print(f"   ⚠️  JSON 파싱 실패, 기본 보고서 타입 사용")
-                print(f"   📄 응답 내용: {response_text[:200]}")
+                logger.warning(f"JSON 파싱 실패, 기본 보고서 타입 사용 - 응답: {response_text[:200]}")
                 return ['사업보고서', '반기보고서'], False
                 
         except Exception as e:
-            print(f"   ⚠️  보고서 타입 추천 실패: {e}")
-            import traceback
-            print(f"   📝 상세 오류: {traceback.format_exc()[:500]}")
+            logger.warning(f"보고서 타입 추천 실패: {e}")
             # 기본값 반환
             return ['사업보고서', '반기보고서'], False
     
@@ -373,12 +377,12 @@ class CompanyAnalyzer:
         """
         # 보고서 타입이 지정되지 않았으면 Gemini에게 추천받기
         if report_types is None and user_query:
-            print(f"📋 사용자 질문 기반 보고서 타입 자동 선택 중...")
+            logger.info("사용자 질문 기반 보고서 타입 자동 선택 중...")
             report_types, _ = self._recommend_report_types(user_query, years if years else 3)
         
         # report_types가 여전히 None이거나 비어있으면 기본값 사용
         if not report_types:
-            print(f"   ℹ️  기본 보고서 타입 사용: 사업보고서, 반기보고서")
+            logger.info("기본 보고서 타입 사용: 사업보고서, 반기보고서")
             report_types = ['사업보고서', '반기보고서']
         
         # 시간 범위가 지정되지 않았으면 user_query에서 추출
@@ -387,15 +391,14 @@ class CompanyAnalyzer:
         elif years is None:
             years = 3  # 기본값
         
-        print(f"📋 보고서 검색 중... (타입: {', '.join(report_types)}, 기간: 최근 {years}년)")
+        logger.info(f"보고서 검색 중... (타입: {', '.join(report_types)}, 기간: 최근 {years}년)")
         
         try:
             # 지정된 기간 검색
             end_date = datetime.now().strftime('%Y%m%d')
             start_date = (datetime.now() - timedelta(days=years*365)).strftime('%Y%m%d')
             
-            print(f"   📅 검색 기간: {start_date} ~ {end_date}")
-            print(f"   🏢 회사 고유번호: {corp_code}")
+            logger.info(f"검색 기간: {start_date} ~ {end_date}, 회사 고유번호: {corp_code}")
             
             # 페이지네이션으로 모든 보고서 검색
             all_reports = []
@@ -403,7 +406,7 @@ class CompanyAnalyzer:
             max_pages = 10  # 최대 10페이지까지 검색 (1000개 보고서)
             
             while page_no <= max_pages:
-                print(f"   📄 페이지 {page_no} 검색 중...")
+                logger.info(f"페이지 {page_no} 검색 중...")
                 
                 params = {
                     'crtfc_key': self.dart_api_key,
@@ -415,24 +418,22 @@ class CompanyAnalyzer:
                 }
                 
                 if page_no == 1:
-                    print(f"   🔗 API URL: {self.base_url}/list.json")
-                    print(f"   📋 요청 파라미터: {params}")
+                    logger.debug(f"API URL: {self.base_url}/list.json, 파라미터: {params}")
                 
                 response = requests.get(f'{self.base_url}/list.json', params=params, timeout=30)
-                print(f"   📡 HTTP 응답 코드: {response.status_code}")
+                logger.debug(f"HTTP 응답 코드: {response.status_code}")
                 
                 response.raise_for_status()
                 
                 data = response.json()
-                print(f"   📊 API 응답 상태: {data.get('status')}")
-                print(f"   📝 API 응답 메시지: {data.get('message', 'N/A')}")
+                logger.debug(f"API 응답 상태: {data.get('status')}, 메시지: {data.get('message', 'N/A')}")
                 
                 if data.get('status') == '000':
                     page_reports = data.get('list', [])
-                    print(f"   📋 페이지 {page_no} 보고서 수: {len(page_reports)}개")
+                    logger.debug(f"페이지 {page_no} 보고서 수: {len(page_reports)}개")
                     
                     if not page_reports:
-                        print(f"   ⚠️  페이지 {page_no}에 보고서가 없습니다. 검색 종료.")
+                        logger.info(f"페이지 {page_no}에 보고서가 없습니다. 검색 종료.")
                         break
                     
                     all_reports.extend(page_reports)
@@ -449,53 +450,43 @@ class CompanyAnalyzer:
                             break
                     
                     if found_target:
-                        print(f"   ✅ 페이지 {page_no}에서 원하는 보고서 타입 발견! 검색 종료.")
+                        logger.info(f"페이지 {page_no}에서 원하는 보고서 타입 발견! 검색 종료.")
                         break
                     
                     page_no += 1
                 else:
-                    print(f"❌ 페이지 {page_no} 조회 실패: {data.get('message')}")
+                    logger.error(f"페이지 {page_no} 조회 실패: {data.get('message')}")
                     break
             
-            print(f"   📋 전체 수집된 보고서 수: {len(all_reports)}개")
+            logger.info(f"전체 수집된 보고서 수: {len(all_reports)}개")
             
-            if all_reports:
-                print(f"   📄 전체 보고서 목록 (처음 5개):")
-                for i, report in enumerate(all_reports[:5]):
-                    print(f"      [{i+1}] {report.get('report_nm', 'N/A')} ({report.get('rcept_dt', 'N/A')})")
-            else:
-                print(f"   ⚠️  전체 보고서가 0개입니다!")
+            if not all_reports:
+                logger.warning("전체 보고서가 0개입니다!")
                 return []
             
             # 원하는 보고서 유형만 필터링
             filtered_reports = []
-            print(f"   🔍 필터링 중... (찾는 타입: {report_types})")
+            logger.info(f"필터링 중... (찾는 타입: {report_types})")
             
             for report in all_reports:
                 report_name = report.get('report_nm', '')
-                print(f"      📄 검사 중: '{report_name}'")
+                logger.debug(f"검사 중: '{report_name}'")
                 
                 for report_type in report_types:
                     if report_type in report_name:
                         filtered_reports.append(report)
-                        print(f"         ✅ 매치! '{report_type}' 포함됨")
+                        logger.debug(f"매치! '{report_type}' 포함됨")
                         break
                 else:
-                    print(f"         ❌ 매치 안됨")
+                    logger.debug("매치 안됨")
             
-            print(f"✅ 총 {len(filtered_reports)}개의 보고서를 찾았습니다.")
-            if filtered_reports:
-                print(f"   📄 필터링된 보고서 목록:")
-                for i, report in enumerate(filtered_reports):
-                    print(f"      [{i+1}] {report.get('report_nm')} ({report.get('rcept_dt')})")
-            else:
-                print(f"   ⚠️  필터링 결과 0개! 원하는 보고서 타입이 없습니다.")
+            logger.info(f"총 {len(filtered_reports)}개의 보고서를 찾았습니다.")
+            if not filtered_reports:
+                logger.warning("필터링 결과 0개! 원하는 보고서 타입이 없습니다.")
             return filtered_reports
                 
         except Exception as e:
-            print(f"❌ 오류: {e}")
-            import traceback
-            print(f"   📋 상세 오류: {traceback.format_exc()}")
+            logger.error(f"보고서 검색 오류: {e}")
             return []
     
     def download_report(self, rcept_no, save_path=None, company_name=None, report_name=None, report_date=None):
@@ -512,20 +503,19 @@ class CompanyAnalyzer:
         Returns:
             tuple: (text_content, saved_file_path, extracted_path)
         """
-        print(f"📥 보고서 조회 중... (접수번호: {rcept_no})")
+        logger.info(f"보고서 조회 중... (접수번호: {rcept_no})")
         
         # 1. 벡터DB에서 먼저 확인
-        print("   🔍 VectorDB 캐시 확인 중...")
+        logger.info("VectorDB 캐시 확인 중...")
         if self.vector_store.check_report_exists(rcept_no):
             cached_content = self.vector_store.get_report_from_cache(rcept_no)
             if cached_content:
-                print(f"   ✅ VectorDB 캐시 사용 (API 호출 생략)")
-                print(f"   💾 캐시된 내용: {len(cached_content):,}자")
+                logger.info(f"VectorDB 캐시 사용 (API 호출 생략) - 캐시된 내용: {len(cached_content):,}자")
                 # 캐시된 내용 반환 (파일 경로는 None)
                 return cached_content, None, None
         
         # 2. 벡터DB에 없으면 API로 다운로드
-        print("   ⚠️  VectorDB에 없음 → DART API에서 다운로드")
+        logger.info("VectorDB에 없음 → DART API에서 다운로드")
         
         # 상태 업데이트 콜백이 있으면 DART 시작 로그 전송
         if hasattr(self, 'status_callback') and self.status_callback:
@@ -552,7 +542,7 @@ class CompanyAnalyzer:
             with open(save_path, 'wb') as f:
                 f.write(response.content)
             
-            print(f"📁 보고서 저장: {save_path} ({len(response.content):,} bytes)")
+            logger.info(f"보고서 저장: {save_path} ({len(response.content):,} bytes)")
             
             # ZIP 파일인지 확인하고 압축 해제
             content = ""
@@ -573,7 +563,7 @@ class CompanyAnalyzer:
                         with zip_ref.open(file_list[0]) as xml_file:
                             content = xml_file.read().decode('utf-8', errors='ignore')
                         
-                        print(f"📂 압축 해제: {extract_dir}")
+                        logger.info(f"압축 해제: {extract_dir}")
             else:
                 # 직접 XML 읽기
                 with open(save_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -581,10 +571,10 @@ class CompanyAnalyzer:
                 extracted_path = save_path
             
             # XML에서 텍스트 추출 및 Markdown 변환
-            print(f"📝 XML → Markdown 변환 시작 (원본: {len(content):,}자)")
+            logger.info(f"XML → Markdown 변환 시작 (원본: {len(content):,}자)")
             text_content = self._extract_text_from_xml(content)
             
-            print(f"✅ 보고서 변환 완료 (Markdown: {len(text_content):,}자)")
+            logger.info(f"보고서 변환 완료 (Markdown: {len(text_content):,}자)")
             
             # 상태 업데이트 콜백이 있으면 DART 완료 로그 전송
             if hasattr(self, 'status_callback') and self.status_callback:
@@ -592,7 +582,7 @@ class CompanyAnalyzer:
             
             # 3. VectorDB에 저장
             if text_content and company_name and report_name and report_date:
-                print(f"💾 VectorDB에 보고서 저장 중...")
+                logger.info("VectorDB에 보고서 저장 중...")
                 try:
                     self.vector_store.add_report(
                         rcept_no=rcept_no,
@@ -601,14 +591,14 @@ class CompanyAnalyzer:
                         report_date=report_date,
                         content=text_content
                     )
-                    print(f"✅ VectorDB 저장 완료")
+                    logger.info("VectorDB 저장 완료")
                 except Exception as ve:
-                    print(f"⚠️  VectorDB 저장 실패 (계속 진행): {ve}")
+                    logger.warning(f"VectorDB 저장 실패 (계속 진행): {ve}")
             
             return text_content, save_path, extracted_path
             
         except Exception as e:
-            print(f"❌ 다운로드 오류: {e}")
+            logger.error(f"다운로드 오류: {e}")
             return "", None, None
     
     def _extract_text_from_xml(self, xml_content):
@@ -625,28 +615,28 @@ class CompanyAnalyzer:
             from bs4 import BeautifulSoup
             
             original_size = len(xml_content)
-            print(f"      📏 원본 XML 크기: {original_size:,}자 ({original_size/1024:.1f}KB)")
+            logger.debug(f"원본 XML 크기: {original_size:,}자 ({original_size/1024:.1f}KB)")
             
             # BeautifulSoup으로 파싱
-            print(f"      🔧 XML 파싱 중 (BeautifulSoup)...")
+            logger.debug("XML 파싱 중 (BeautifulSoup)...")
             try:
                 soup = BeautifulSoup(xml_content, 'xml')
-                print(f"      ✅ XML 파싱 성공")
+                logger.debug("XML 파싱 성공")
             except:
-                print(f"      ⚠️  XML 파서 실패, lxml 시도...")
+                logger.debug("XML 파서 실패, lxml 시도...")
                 try:
                     soup = BeautifulSoup(xml_content, 'lxml')
-                    print(f"      ✅ lxml 파싱 성공")
+                    logger.debug("lxml 파싱 성공")
                 except:
-                    print(f"      ⚠️  모든 파서 실패, 정규식으로 전환")
+                    logger.warning("모든 파서 실패, 정규식으로 전환")
                     return self._simple_text_extraction(xml_content)
             
             # 모든 텍스트 추출 (태그 제거, 내용 보존, 제한 없음)
-            print(f"      📝 모든 텍스트 추출 중... (제한 없음)")
+            logger.debug("모든 텍스트 추출 중... (제한 없음)")
             extracted_text = soup.get_text(separator='\n', strip=False)
             
             # 정리
-            print(f"      🧹 텍스트 정리 중...")
+            logger.debug("텍스트 정리 중...")
             
             # 1. 연속된 공백을 단일 공백으로 (줄바꿈은 보존)
             extracted_text = re.sub(r'[ \t]+', ' ', extracted_text)
@@ -664,19 +654,16 @@ class CompanyAnalyzer:
             
             extracted_size = len(extracted_text)
             
-            print(f"   ✅ XML → 텍스트 추출 완료!")
-            print(f"      원본 크기: {original_size:,}자 ({original_size/1024:.1f}KB)")
-            print(f"      추출 후: {extracted_size:,}자 ({extracted_size/1024:.1f}KB)")
-            print(f"      보존율: {(extracted_size/original_size*100):.1f}%")
+            logger.info(f"XML → 텍스트 추출 완료! 원본: {original_size:,}자 → 추출: {extracted_size:,}자 (보존율: {(extracted_size/original_size*100):.1f}%)")
             
             if not extracted_text or len(extracted_text) < 1000:
-                print(f"   ⚠️  추출 결과가 너무 적음 ({len(extracted_text)}자), 정규식으로 재시도")
+                logger.warning(f"추출 결과가 너무 적음 ({len(extracted_text)}자), 정규식으로 재시도")
                 return self._simple_text_extraction(xml_content)
             
             return extracted_text
             
         except Exception as e:
-            print(f"   ⚠️  XML 파싱 실패, 정규식으로 전환: {e}")
+            logger.warning(f"XML 파싱 실패, 정규식으로 전환: {e}")
             return self._simple_text_extraction(xml_content)
     
     def _parse_table_to_markdown(self, table_element):
@@ -723,7 +710,7 @@ class CompanyAnalyzer:
         단순 텍스트 추출 (백업용) - 정규표현식으로 XML 태그만 제거
         모든 내용을 보존하고 XML 태그만 제거
         """
-        print(f"      🔧 단순 텍스트 추출 모드 (정규식)")
+        logger.debug("단순 텍스트 추출 모드 (정규식)")
         
         # 1. XML 태그 제거 (내용은 보존)
         # <tag>content</tag> → content
@@ -750,7 +737,7 @@ class CompanyAnalyzer:
         # 7. 전체 앞뒤 공백 제거
         text = text.strip()
         
-        print(f"      추출 결과: {len(text):,}자 ({len(text)/1024:.1f}KB)")
+        logger.debug(f"추출 결과: {len(text):,}자 ({len(text)/1024:.1f}KB)")
         
         return text
     
@@ -765,11 +752,10 @@ class CompanyAnalyzer:
         downloads_dir = 'downloads'
         
         if not os.path.exists(downloads_dir):
-            print(f"ℹ️  '{downloads_dir}' 폴더가 없습니다.")
+            logger.info(f"'{downloads_dir}' 폴더가 없습니다.")
             return
         
-        print(f"🧹 다운로드 파일 정리 시작...")
-        print(f"   경로: {downloads_dir}")
+        logger.info(f"다운로드 파일 정리 시작... 경로: {downloads_dir}")
         
         try:
             # 모든 파일 및 폴더 목록 가져오기
@@ -784,7 +770,7 @@ class CompanyAnalyzer:
             # 수정 시간 기준으로 정렬 (최신순)
             items.sort(key=lambda x: x[1], reverse=True)
             
-            print(f"   총 {len(items)}개 항목 발견")
+            logger.info(f"총 {len(items)}개 항목 발견")
             
             # 삭제할 항목 결정
             items_to_delete = items[keep_latest:] if keep_latest > 0 else items
@@ -919,6 +905,13 @@ class CompanyAnalyzer:
         try:
             prompt = self.prompt_manager.get_prompt('industry_inference', company_name=company_name)
             
+            # Full prompt 로그 출력
+            logger.info("=" * 60)
+            logger.info("📝 FULL PROMPT (Industry Inference)")
+            logger.info("=" * 60)
+            logger.info(prompt)
+            logger.info("=" * 60)
+            
             industry = self.llm_orchestrator.generate(
                 prompt=prompt,
                 task_type='query_analysis'
@@ -951,6 +944,13 @@ class CompanyAnalyzer:
                 company_name=company_name,
                 base_industry=base_industry
             )
+            
+            # Full prompt 로그 출력
+            logger.info("=" * 60)
+            logger.info("📝 FULL PROMPT (Industry Keywords Extraction)")
+            logger.info("=" * 60)
+            logger.info(prompt)
+            logger.info("=" * 60)
             
             response_text = self.llm_orchestrator.generate(
                 prompt=prompt,
@@ -1260,7 +1260,7 @@ class CompanyAnalyzer:
         print(f"\n✅ 총 {len(downloaded_reports)}개 보고서 수집 완료")
         return downloaded_reports
     
-    def analyze_with_gemini(self, company_name, report_content, user_query, additional_reports=None):
+    def analyze_with_gemini(self, company_name, report_content, user_query, additional_reports=None, exclude_opinions=False):
         """
         Gemini API로 보고서 분석
         
@@ -1360,12 +1360,18 @@ class CompanyAnalyzer:
             # 추가 보고서 섹션 준비
             additional_section = additional_content if additional_content else ""
             
+            # 의견제외 지시사항 생성
+            exclude_opinions_instruction = ""
+            if exclude_opinions:
+                exclude_opinions_instruction = "\n6. **중요**: 증권사 리포트 내 작성자의 의견, 추천, 투자 의견, 목표주가, 등급 등을 제외하고 오직 사실(Fact) 기반 데이터만을 참조하여 분석해주세요. 의견이 포함된 부분은 명시적으로 제외하고 객관적 데이터만 활용하세요."
+            
             prompt = self.prompt_manager.get_prompt(
                 'full_analysis',
                 company_name=company_name,
                 user_query=user_query,
                 main_report=report_content,
-                additional_section=additional_section
+                additional_section=additional_section,
+                exclude_opinions_instruction=exclude_opinions_instruction
             )
             
             # LLM Orchestrator로 분석
@@ -1373,6 +1379,13 @@ class CompanyAnalyzer:
             print(f"   🚀 LLM Orchestrator 호출 중...")
             print(f"      입력: 약 {len(prompt) / 4:,.0f} 토큰")
             print(f"      총 보고서 내용: {total_content_length:,}자")
+            
+            # Full prompt 로그 출력
+            logger.info("=" * 80)
+            logger.info("📝 FULL PROMPT (Full Analysis)")
+            logger.info("=" * 80)
+            logger.info(prompt)
+            logger.info("=" * 80)
             
             result_text = self.llm_orchestrator.generate(
                 prompt=prompt,
@@ -1410,7 +1423,7 @@ class CompanyAnalyzer:
             else:
                 return f"분석 중 오류가 발생했습니다: {error_message[:500]}"
     
-    def analyze_with_gemini_rag(self, company_name, user_query, relevant_context, num_chunks):
+    def analyze_with_gemini_rag(self, company_name, user_query, relevant_context, num_chunks, exclude_opinions=False):
         """
         RAG 방식으로 Gemini AI 분석 (VectorDB에서 검색된 관련 청크만 사용)
         
@@ -1431,19 +1444,32 @@ class CompanyAnalyzer:
             print(f"      - 총 텍스트: {len(relevant_context):,}자")
             print(f"      - 질문: {user_query[:100]}...")
             
+            # 의견제외 지시사항 생성
+            exclude_opinions_instruction = ""
+            if exclude_opinions:
+                exclude_opinions_instruction = "\n6. **중요**: 증권사 리포트 내 작성자의 의견, 추천, 투자 의견, 목표주가, 등급 등을 제외하고 오직 사실(Fact) 기반 데이터만을 참조하여 분석해주세요. 의견이 포함된 부분은 명시적으로 제외하고 객관적 데이터만 활용하세요."
+            
             # RAG 프롬프트 생성
             prompt = self.prompt_manager.get_prompt(
                 'rag_analysis',
                 company_name=company_name,
                 user_query=user_query,
                 num_chunks=num_chunks,
-                relevant_context=relevant_context
+                relevant_context=relevant_context,
+                exclude_opinions_instruction=exclude_opinions_instruction
             )
             
             # LLM Orchestrator로 RAG 분석
             print(f"   🚀 LLM Orchestrator 호출 중... (RAG 모드)")
             print(f"      입력: 약 {len(prompt) / 4:,.0f} 토큰")
             print(f"      관련 내용: {len(relevant_context):,}자")
+            
+            # Full prompt 로그 출력
+            logger.info("=" * 80)
+            logger.info("📝 FULL PROMPT (RAG Analysis)")
+            logger.info("=" * 80)
+            logger.info(prompt)
+            logger.info("=" * 80)
             
             result_text = self.llm_orchestrator.generate(
                 prompt=prompt,
@@ -1537,7 +1563,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
 """
         return summary
     
-    def analyze_company(self, company_name, user_query, status_callback=None):
+    def analyze_company(self, company_name, user_query, status_callback=None, exclude_opinions=False):
         """
         회사 분석 전체 프로세스
         
@@ -1596,7 +1622,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
             update_status(f"⚪ DART 완료: 회사 정보 조회")
             
             # 2. 보고서 검색 (사용자 질문 기반 자동 선택)
-            update_status(f"🔵 Gemini AI 시작: 질문 분석")
+            update_status(f"🔵 Perplexity AI 시작: 질문 분석")
             update_status(f"🔵 DART 시작: 보고서 검색")
             update_status(f"📊 2단계: 사용자 질문 분석 및 적절한 보고서 검색 중...")
             logger.info(f"고유번호로 보고서 검색: {corp_code}, 질문: {user_query}")
@@ -1614,7 +1640,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
             
             logger.info(f"보고서 검색 완료: {len(reports)}개 발견")
             update_status(f"✅ {len(reports)}개의 적합한 보고서를 찾았습니다.")
-            update_status(f"⚪ Gemini AI 완료: 질문 분석")
+            update_status(f"⚪ Midm AI 완료: 질문 분석")
             update_status(f"⚪ DART 완료: 보고서 검색")
             
             result['reports_found'] = [
@@ -1955,10 +1981,10 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
                 update_status(f"   📝 총 텍스트: {total_chars:,}자 (약 {estimated_tokens:,} 토큰)")
                 update_status(f"   ⏱️  예상 소요 시간: 약 {estimated_minutes}~{estimated_minutes+2}분")
                 update_status(f"   🔄 Gemini API 호출 중... (대용량 보고서 처리)")
-                logger.info(f"Gemini AI 분석 시작 (메인 + {report_summary}, 예상: {estimated_minutes}분)")
+                logger.info(f"Gemini AI 분석 시작 (메인 + {report_summary}, 예상: {estimated_minutes}분, 의견제외: {exclude_opinions})")
             else:
                 update_status(f"🤖 4단계: Gemini AI 분석 중... (메인 보고서만, 약 1~2분 소요)")
-                logger.info("Gemini AI 분석 시작")
+                logger.info(f"Gemini AI 분석 시작 (의견제외: {exclude_opinions})")
             
             # 4-1. VectorDB에서 질문 관련 청크 검색 (RAG)
             update_status(f"🔵 VectorDB 시작: RAG 검색")
@@ -1996,7 +2022,8 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
                         company_name=found_name,
                         user_query=user_query,
                         relevant_context=context_from_chunks,
-                        num_chunks=len(relevant_chunks)
+                        num_chunks=len(relevant_chunks),
+                        exclude_opinions=exclude_opinions
                     )
                     
                     logger.info(f"Gemini AI 분석 완료: {len(analysis)}자")

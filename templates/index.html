@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>기업 분석 AI - DART & 네이버 증권사 리포트 & Gemini & Midm</title>
+    <title>기업 분석 AI - DART & 네이버 증권사 리포트 & Gemini & Midm & Perplexity</title>
     
     <!-- External CSS -->
     <link rel="stylesheet" href="/static/css/styles.css">
@@ -17,7 +17,7 @@
     <div class="container">
         <div class="header">
             <h1>🔍 기업 분석 AI</h1>
-            <p>공시자료 × 증권사 리포트 × Gemini × Midm AI로 기업을 분석합니다</p>
+            <p>공시자료 × 증권사 리포트 × Gemini × Midm × Perplexity AI로 기업을 분석합니다</p>
         </div>
 
         <div class="card">
@@ -41,6 +41,19 @@
                         placeholder="예: 최근 재무 상태는 어떤가요? 주요 사업 내용과 실적을 분석해주세요."
                         required
                     ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <div class="toggle-container">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="excludeOpinions" name="exclude_opinions">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-text">📊 증권사 리포트를 Fact 기반으로만 분석 진행</span>
+                        </label>
+                        <div class="toggle-description">
+                            체크 시 증권사 리포트에서 작성자의 의견이나 추천을 제외하고 사실 데이터만 기반으로 분석합니다.
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn" id="submitBtn">
@@ -123,6 +136,15 @@
                         <div class="component comp-midm" id="comp-midm">
                             <div class="component-icon">🤖</div>
                             <div class="component-label">Midm AI</div>
+                            <div class="component-status">대기중</div>
+                        </div>
+
+                        <!-- Perplexity LLM -->
+                        <div class="component comp-perplexity" id="comp-perplexity">
+                            <div class="component-icon">
+                                <img src="/static/icons_perplexity.png" alt="Perplexity" style="width: 24px; height: 24px;">
+                            </div>
+                            <div class="component-label">Perplexity AI</div>
                             <div class="component-status">대기중</div>
                         </div>
 
