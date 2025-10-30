@@ -58,8 +58,8 @@ gemini_provider = GeminiProvider(
     api_key=config.get_gemini_api_key(),
     model_candidates=config.GEMINI_MODEL_CANDIDATES
 )
-llm_orchestrator.register_provider(gemini_provider)
-print("✅ Gemini Provider 등록 완료")
+llm_orchestrator.register_provider(gemini_provider, is_default=True)
+print("✅ Gemini Provider 등록 완료 (기본 Provider)")
 
 # Midm Provider 등록 (검색어 제안용)
 print("🤖 Midm Provider 등록 중...")
@@ -80,8 +80,8 @@ if config.PERPLEXITY_API_KEY:
     perplexity_provider = PerplexityProvider(
         api_key=config.get_perplexity_api_key()
     )
-    llm_orchestrator.register_provider(perplexity_provider, is_default=True)
-    print("✅ Perplexity Provider 등록 완료 (기본 Provider)")
+    llm_orchestrator.register_provider(perplexity_provider)
+    print("✅ Perplexity Provider 등록 완료")
 else:
     print("⚠️  Perplexity API 키가 설정되지 않았습니다.")
     print("   질문 분석에는 기본 Provider(Gemini)가 사용됩니다.")
@@ -510,6 +510,7 @@ if __name__ == '__main__':
     # Flask reloader가 메인 프로세스에서만 메시지 출력
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         print(f"📍 접속 URL: http://localhost:{config.FLASK_PORT}")
+        print(f"🤖 LLM 설정: Gemini AI만 사용")
         print(f"\n브라우저에서 http://localhost:{config.FLASK_PORT} 으로 접속하세요.\n")
         print("종료하려면 Ctrl+C 를 누르세요.\n")
     

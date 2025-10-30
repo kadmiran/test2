@@ -193,18 +193,38 @@ const architectureDiagram = {
     activate(componentName, status = '처리중') {
         const comp = this.components[componentName];
         if (comp) {
+            console.log(`🟢 컴포넌트 활성화: ${componentName} → ${status}`);
             comp.classList.add('active');
             const statusEl = comp.querySelector('.component-status');
-            if (statusEl) statusEl.textContent = status;
+            if (statusEl) {
+                statusEl.textContent = status;
+                console.log(`  📝 상태 텍스트 업데이트: ${status}`);
+            } else {
+                console.warn(`  ⚠️ 상태 요소를 찾을 수 없음: ${componentName}`);
+            }
+            
+            // 스타일 확인
+            const computedStyle = window.getComputedStyle(comp);
+            console.log(`  🎨 스타일 적용됨: border-color=${computedStyle.borderColor}`);
+        } else {
+            console.error(`❌ 컴포넌트를 찾을 수 없음: ${componentName}`);
         }
     },
     
     deactivate(componentName, status = '완료') {
         const comp = this.components[componentName];
         if (comp) {
+            console.log(`🔴 컴포넌트 비활성화: ${componentName} → ${status}`);
             comp.classList.remove('active');
             const statusEl = comp.querySelector('.component-status');
-            if (statusEl) statusEl.textContent = status;
+            if (statusEl) {
+                statusEl.textContent = status;
+                console.log(`  📝 상태 텍스트 업데이트: ${status}`);
+            } else {
+                console.warn(`  ⚠️ 상태 요소를 찾을 수 없음: ${componentName}`);
+            }
+        } else {
+            console.error(`❌ 컴포넌트를 찾을 수 없음: ${componentName}`);
         }
     },
     
@@ -265,10 +285,12 @@ function updateDiagramFromMessage(message) {
         return;
     }
     
+    console.log(`📨 다이어그램 메시지 수신: ${message}`);
     const msg = message.toLowerCase();
     
     // 분석 시작
     if (msg.includes('분석 시작') || msg.includes('분석 요청')) {
+        console.log('🚀 분석 시작 감지');
         architectureDiagram.activate('frontend', '요청 전송');
         architectureDiagram.showConnection('frontend', 'webserver', 2000);
         setTimeout(() => {
@@ -277,42 +299,69 @@ function updateDiagramFromMessage(message) {
         }, 500);
     }
     
-    // 🔵 시작 로그 처리 (통합)
-    const startMatch = msg.match(/🔵\s*(dart|midm|perplexity|naver|vectordb|gemini)/);
-    if (startMatch) {
-        const component = startMatch[1];
-        const statusMap = {
-            'dart': '처리중',
-            'midm': '질문 분석',
-            'perplexity': '질문 분석',
-            'naver': '크롤링중',
-            'vectordb': '처리중',
-            'gemini': 'AI 분석중'
-        };
+    // 다이어그램 전용 상태 업데이트 (🎯 컴포넌트:상태)
+    const diagramMatch = msg.match(/🎯\s*(\w+):(\w+)/);
+    if (diagramMatch) {
+        const [, component, status] = diagramMatch;
+        console.log(`🎯 다이어그램 상태 업데이트: ${component} → ${status}`);
         
-        architectureDiagram.activate(component, statusMap[component]);
-        
-        // 연결 화살표 표시
-        if (component === 'midm' || component === 'perplexity' || component === 'gemini') {
-            architectureDiagram.showConnection('webserver', 'vectordb', 0);
-            architectureDiagram.showConnection('vectordb', component, 0);
-        } else {
-            architectureDiagram.showConnection('webserver', component, 0);
+        switch (status) {
+            case 'start':
+                architectureDiagram.activate(component, '처리중');
+                break;
+            case 'complete':
+                architectureDiagram.deactivate(component, '완료');
+                break;
+            case 'error':
+                architectureDiagram.deactivate(component, '오류');
+                break;
+            default:
+                console.log(`알 수 없는 상태: ${status}`);
         }
     }
     
-    // ⚪ 완료 로그 처리 (통합)
-    const endMatch = msg.match(/⚪\s*(dart|midm|perplexity|naver|vectordb|gemini)/);
-    if (endMatch) {
-        const component = endMatch[1];
-        setTimeout(() => {
-            architectureDiagram.deactivate(component, '완료');
+    // 🔵 시작 로그 처리 (통합) - 다이어그램 전용 메시지가 없을 때만
+    if (!diagramMatch) {
+        const startMatch = msg.match(/🔵\s*(dart|midm|perplexity|naver|vectordb|gemini)/);
+        if (startMatch) {
+            const component = startMatch[1];
+            console.log(`🔵 시작 로그 감지: ${component}`);
+            const statusMap = {
+                'dart': '처리중',
+                'midm': '질문 분석',
+                'perplexity': '질문 분석',
+                'naver': '크롤링중',
+                'vectordb': '처리중',
+                'gemini': 'AI 분석중'
+            };
             
-            // Gemini 완료 시 결과 반환
-            if (component === 'gemini' || component === 'perplexity' || component === 'midm') {
-                architectureDiagram.showConnection('gemini', 'webserver', 2000);
+            architectureDiagram.activate(component, statusMap[component]);
+            
+            // 연결 화살표 표시
+            if (component === 'midm' || component === 'perplexity' || component === 'gemini') {
+                architectureDiagram.showConnection('webserver', 'vectordb', 0);
+                architectureDiagram.showConnection('vectordb', component, 0);
+            } else {
+                architectureDiagram.showConnection('webserver', component, 0);
             }
-        }, 800);
+        }
+    }
+    
+    // ⚪ 완료 로그 처리 (통합) - 다이어그램 전용 메시지가 없을 때만
+    if (!diagramMatch) {
+        const endMatch = msg.match(/⚪\s*(dart|midm|perplexity|naver|vectordb|gemini)/);
+        if (endMatch) {
+            const component = endMatch[1];
+            console.log(`⚪ 완료 로그 감지: ${component}`);
+            setTimeout(() => {
+                architectureDiagram.deactivate(component, '완료');
+                
+                // Gemini 완료 시 결과 반환
+                if (component === 'gemini' || component === 'perplexity' || component === 'midm') {
+                    architectureDiagram.showConnection('gemini', 'webserver', 2000);
+                }
+            }, 800);
+        }
     }
     
     // 전체 분석 완료

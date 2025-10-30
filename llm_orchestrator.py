@@ -96,7 +96,9 @@ class GeminiProvider(LLMProvider):
     
     def generate_content(self, prompt: str, **kwargs) -> str:
         """텍스트 생성"""
+        print(f"   🔄 Gemini AI 처리 중... (프롬프트 길이: {len(prompt)}자)")
         response = self.model.generate_content(prompt)
+        print(f"   ✅ Gemini AI 응답 완료 (응답 길이: {len(response.text)}자)")
         return response.text
     
     def get_name(self) -> str:
@@ -455,7 +457,8 @@ class LLMOrchestrator:
             생성된 텍스트
         """
         provider = self.select_provider(task_type)
-        print(f"🤖 사용 LLM: {provider.get_name()}")
+        print(f"🤖 사용 LLM: {provider.get_name().upper()}")
+        print(f"📝 작업 유형: {task_type or '기본'}")
         return provider.generate_content(prompt, **kwargs)
     
     def list_providers(self) -> list:

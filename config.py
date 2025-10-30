@@ -65,13 +65,13 @@ class Config:
     # ============================================
     
     # 기본 LLM Provider
-    DEFAULT_LLM_PROVIDER: str = 'perplexity'  # Perplexity 사용 (웹 검색 지원)
+    DEFAULT_LLM_PROVIDER: str = 'gemini'  # Gemini 사용
     
-    # 작업별 LLM 라우팅 (task_type -> provider_name)
+    # 작업별 LLM 라우팅 (task_type -> provider_name) - Gemini만 사용
     LLM_TASK_ROUTING: dict = {
-        'query_analysis': 'perplexity',     # 질문 분석은 Perplexity 사용 (웹 검색 지원)
+        'query_analysis': 'gemini',         # 질문 분석은 Gemini 사용
         'long_context_analysis': 'gemini',  # 긴 맥락 분석은 Gemini 사용
-        'name_variation': 'perplexity',     # 검색어 제안은 Perplexity 사용 (Midm 서버 다운)
+        'name_variation': 'gemini',         # 검색어 제안은 Gemini 사용
     }
     
     # ============================================

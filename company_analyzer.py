@@ -418,15 +418,35 @@ class CompanyAnalyzer:
                 }
                 
                 if page_no == 1:
-                    logger.debug(f"API URL: {self.base_url}/list.json, 파라미터: {params}")
+                    logger.info(f"📤 DART API 요청 정보:")
+                    logger.info(f"   - URL: {self.base_url}/list.json")
+                    logger.info(f"   - 요청 파라미터: {params}")
+                    logger.info(f"   - 회사 고유번호: {corp_code}")
+                    logger.info(f"   - 검색 기간: {start_date} ~ {end_date}")
+                    logger.info(f"   - 보고서 타입: {report_types}")
                 
                 response = requests.get(f'{self.base_url}/list.json', params=params, timeout=30)
-                logger.debug(f"HTTP 응답 코드: {response.status_code}")
+                logger.info(f"📡 DART API 응답 코드: {response.status_code}")
                 
                 response.raise_for_status()
                 
                 data = response.json()
-                logger.debug(f"API 응답 상태: {data.get('status')}, 메시지: {data.get('message', 'N/A')}")
+                logger.info(f"📋 DART API 응답 상세:")
+                logger.info(f"   - 상태: {data.get('status')}")
+                logger.info(f"   - 메시지: {data.get('message', 'N/A')}")
+                logger.info(f"   - 전체 응답 크기: {len(str(data))}자")
+                
+                # 응답 데이터의 주요 필드들 로그 출력
+                if 'list' in data:
+                    logger.info(f"   - 보고서 목록 개수: {len(data.get('list', []))}개")
+                    if data.get('list'):
+                        sample_report = data['list'][0]
+                        logger.info(f"   - 보고서 샘플 필드: {list(sample_report.keys())}")
+                        logger.info(f"   - 첫 번째 보고서: {sample_report.get('report_nm', 'N/A')} ({sample_report.get('rcept_dt', 'N/A')})")
+                
+                # 전체 응답 데이터 출력 (디버깅용)
+                logger.info(f"📄 DART API 전체 응답 데이터:")
+                logger.info(f"{data}")
                 
                 if data.get('status') == '000':
                     page_reports = data.get('list', [])
@@ -455,7 +475,10 @@ class CompanyAnalyzer:
                     
                     page_no += 1
                 else:
-                    logger.error(f"페이지 {page_no} 조회 실패: {data.get('message')}")
+                    logger.error(f"❌ 페이지 {page_no} 조회 실패:")
+                    logger.error(f"   - 상태 코드: {data.get('status')}")
+                    logger.error(f"   - 오류 메시지: {data.get('message', 'N/A')}")
+                    logger.error(f"   - 전체 응답: {data}")
                     break
             
             logger.info(f"전체 수집된 보고서 수: {len(all_reports)}개")
@@ -466,19 +489,29 @@ class CompanyAnalyzer:
             
             # 원하는 보고서 유형만 필터링
             filtered_reports = []
-            logger.info(f"필터링 중... (찾는 타입: {report_types})")
+            logger.info(f"🔍 보고서 필터링 시작:")
+            logger.info(f"   - 전체 보고서 수: {len(all_reports)}개")
+            logger.info(f"   - 찾는 타입: {report_types}")
             
-            for report in all_reports:
+            match_count = 0
+            for i, report in enumerate(all_reports):
                 report_name = report.get('report_nm', '')
-                logger.debug(f"검사 중: '{report_name}'")
+                report_date = report.get('rcept_dt', '')
+                logger.info(f"   [{i+1}/{len(all_reports)}] 검사 중: '{report_name}' ({report_date})")
                 
+                matched = False
                 for report_type in report_types:
                     if report_type in report_name:
                         filtered_reports.append(report)
-                        logger.debug(f"매치! '{report_type}' 포함됨")
+                        match_count += 1
+                        logger.info(f"      ✅ 매치! '{report_type}' 포함됨 → 필터링됨")
+                        matched = True
                         break
-                else:
-                    logger.debug("매치 안됨")
+                
+                if not matched:
+                    logger.info(f"      ❌ 매치 안됨")
+            
+            logger.info(f"🎯 필터링 결과: {match_count}개 매치됨")
             
             logger.info(f"총 {len(filtered_reports)}개의 보고서를 찾았습니다.")
             if not filtered_reports:
@@ -486,7 +519,13 @@ class CompanyAnalyzer:
             return filtered_reports
                 
         except Exception as e:
-            logger.error(f"보고서 검색 오류: {e}")
+            logger.error(f"❌ DART 보고서 검색 오류:")
+            logger.error(f"   - 오류 타입: {type(e).__name__}")
+            logger.error(f"   - 오류 메시지: {str(e)}")
+            logger.error(f"   - 검색 파라미터: corp_code={corp_code}, years={years}")
+            logger.error(f"   - 보고서 타입: {report_types}")
+            import traceback
+            logger.error(f"   - 상세 스택 트레이스:\n{traceback.format_exc()}")
             return []
     
     def download_report(self, rcept_no, save_path=None, company_name=None, report_name=None, report_date=None):
@@ -1579,11 +1618,17 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         logger = logging.getLogger(__name__)
         
-        def update_status(message):
+        def update_status(message, component=None, status_type=None):
             """상태 업데이트 헬퍼"""
             logger.info(message)
             if status_callback:
                 status_callback(message)
+            
+            # 다이어그램 업데이트를 위한 상세 로깅
+            if component and status_type:
+                logger.info(f"🎯 다이어그램 업데이트: {component} → {status_type}")
+                if status_callback:
+                    status_callback(f"🎯 {component}:{status_type}")
         
         # 상태 콜백을 인스턴스 변수로 설정 (download_report에서 사용)
         self.status_callback = status_callback
@@ -1601,7 +1646,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
         
         try:
             # 1. 회사 고유번호 조회
-            update_status(f"🔵 DART 시작: 회사 정보 조회")
+            update_status(f"🔵 DART 시작: 회사 정보 조회", "dart", "start")
             update_status(f"📋 1단계: '{company_name}' 회사 정보 조회 중...")
             logger.info(f"회사명으로 고유번호 조회 시작: {company_name}")
             
@@ -1619,11 +1664,11 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
             result['corp_code'] = corp_code
             result['stock_code'] = stock_code
             update_status(f"✅ 회사 정보 조회 완료: {found_name} (종목코드: {stock_code})")
-            update_status(f"⚪ DART 완료: 회사 정보 조회")
+            update_status(f"⚪ DART 완료: 회사 정보 조회", "dart", "complete")
             
             # 2. 보고서 검색 (사용자 질문 기반 자동 선택)
-            update_status(f"🔵 Perplexity AI 시작: 질문 분석")
-            update_status(f"🔵 DART 시작: 보고서 검색")
+            update_status(f"🔵 Gemini AI 시작: 질문 분석", "gemini", "start")
+            update_status(f"🔵 DART 시작: 보고서 검색", "dart", "start")
             update_status(f"📊 2단계: 사용자 질문 분석 및 적절한 보고서 검색 중...")
             logger.info(f"고유번호로 보고서 검색: {corp_code}, 질문: {user_query}")
             
@@ -1640,8 +1685,8 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
             
             logger.info(f"보고서 검색 완료: {len(reports)}개 발견")
             update_status(f"✅ {len(reports)}개의 적합한 보고서를 찾았습니다.")
-            update_status(f"⚪ Midm AI 완료: 질문 분석")
-            update_status(f"⚪ DART 완료: 보고서 검색")
+            update_status(f"⚪ Gemini AI 완료: 질문 분석", "gemini", "complete")
+            update_status(f"⚪ DART 완료: 보고서 검색", "dart", "complete")
             
             result['reports_found'] = [
                 {
@@ -1658,7 +1703,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
             report_name = latest_report['report_nm']
             report_date = latest_report.get('rcept_dt', '')
             
-            update_status(f"🔵 VectorDB 시작: 캐시 확인")
+            update_status(f"🔵 VectorDB 시작: 캐시 확인", "vectordb", "start")
             update_status(f"📥 3단계: 메인 보고서 수집 중... ({report_name})")
             logger.info(f"메인 보고서 수집 시작: {rcept_no} - {report_name}")
             
@@ -1681,15 +1726,15 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
                 logger.info(f"메인 보고서 VectorDB 검색 확인: {len(report_content)}자")
                 logger.info(f"보고서 형식: Markdown (캐시됨)")
                 update_status(f"✅ 메인 보고서 VectorDB 검색 확인 ({len(report_content):,}자, Markdown 형식)")
-                update_status(f"⚪ VectorDB 완료: 캐시 확인 (적중)")
+                update_status(f"⚪ VectorDB 완료: 캐시 확인 (적중)", "vectordb", "complete")
             else:
                 # API에서 다운로드한 경우
-                update_status(f"🔵 DART 시작: 보고서 다운로드")
+                update_status(f"🔵 DART 시작: 보고서 다운로드", "dart", "start")
                 logger.info(f"메인 보고서 다운로드 완료: {len(report_content)}자")
                 logger.info(f"보고서 형식: Markdown 변환됨")
                 update_status(f"✅ 메인 보고서 다운로드 완료 ({len(report_content):,}자, Markdown 형식)")
-                update_status(f"⚪ DART 완료: 보고서 다운로드")
-                update_status(f"⚪ VectorDB 완료: 캐시 확인 (미적중)")
+                update_status(f"⚪ DART 완료: 보고서 다운로드", "dart", "complete")
+                update_status(f"⚪ VectorDB 완료: 캐시 확인 (미적중)", "vectordb", "complete")
             
             # 다운로드 파일 정보 저장
             result['downloaded_files'] = {
@@ -2014,7 +2059,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
                     ])
                     
                     # Gemini 분석 (관련 청크만 사용)
-                    update_status(f"🔵 Gemini AI 시작: 분석")
+                    update_status(f"🔵 Gemini AI 시작: 분석", "gemini", "start")
                     update_status(f"🤖 Gemini AI 분석 중... (검색된 관련 내용만 사용)")
                     update_status(f"   📊 입력 데이터: {len(relevant_chunks)}개 청크, {total_chunk_chars:,}자")
                     
@@ -2028,7 +2073,7 @@ XML 뷰어(VS Code, XML Notepad 등)로 열어서 확인하세요.
                     
                     logger.info(f"Gemini AI 분석 완료: {len(analysis)}자")
                     update_status(f"✅ AI 분석 완료!")
-                    update_status(f"⚪ Gemini AI 완료: 분석")
+                    update_status(f"⚪ Gemini AI 완료: 분석", "gemini", "complete")
                     
                 else:
                     update_status(f"⚠️  관련 내용을 찾지 못했습니다. VectorDB에 데이터가 없을 수 있습니다.")
